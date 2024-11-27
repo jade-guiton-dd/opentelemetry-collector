@@ -260,10 +260,15 @@ ALL_MOD_PATHS := "" $(ALL_MODULES:.%=%)
 # against the current version of this repo.
 .PHONY: check-contrib
 check-contrib:
+	@if [ -z "$(SKIP_RESTORE_CONTRIB)" ]; then \
+		STASH_ID=$$(cd $(CONTRIB_PATH) && git stash create -a); \
+		echo Saved contrib repo state to commit $$STASH_ID; \
+	fi;
+
 	@echo Setting contrib at $(CONTRIB_PATH) to use this core checkout
-	@$(MAKE) -C $(CONTRIB_PATH) for-all CMD="$(GOCMD) mod edit \
+	@$(MAKE) -C $(CONTRIB_PATH) for-group-cmd CMD="$(GOCMD) mod edit \
 		$(addprefix -replace ,$(join $(ALL_MOD_PATHS:%=go.opentelemetry.io/collector%=),$(ALL_MOD_PATHS:%=$(CURDIR)%)))"
-	@$(MAKE) -C $(CONTRIB_PATH) for-all CMD="$(GOCMD) mod tidy"
+	@$(MAKE) -C $(CONTRIB_PATH) gotidy
 
 	@$(MAKE) generate-contrib
 
@@ -271,7 +276,8 @@ check-contrib:
 	@$(MAKE) -C $(CONTRIB_PATH) gotest
 
 	@if [ -z "$(SKIP_RESTORE_CONTRIB)" ]; then \
-		$(MAKE) restore-contrib; \
+		echo Restoring contrib repo state; \
+		cd $(CONTRIB_PATH); git checkout $$STASH_ID .; \
 	fi
 
 .PHONY: generate-contrib
@@ -279,14 +285,6 @@ generate-contrib:
 	@echo -e "\nGenerating files in contrib"
 	$(MAKE) -C $(CONTRIB_PATH) -B install-tools
 	$(MAKE) -C $(CONTRIB_PATH) generate GROUP=all
-
-# Restores contrib to its original state after running check-contrib.
-.PHONY: restore-contrib
-restore-contrib:
-	@echo -e "\nRestoring contrib at $(CONTRIB_PATH) to its original state"
-	@$(MAKE) -C $(CONTRIB_PATH) for-all CMD="$(GOCMD) mod edit \
-		$(addprefix -dropreplace ,$(ALL_MOD_PATHS:%=go.opentelemetry.io/collector%))"
-	@$(MAKE) -C $(CONTRIB_PATH) for-all CMD="$(GOCMD) mod tidy"
 
 # List of directories where certificates are stored for unit tests.
 CERT_DIRS := localhost|""|config/configgrpc/testdata \
