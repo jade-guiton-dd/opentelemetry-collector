@@ -41,6 +41,8 @@ if [ "${CANDIDATE_BETA}" != "" ]; then
 fi
 git push origin "${BRANCH}"
 
+exit
+
 # Use OpenTelemetryBot account to create PR, allowing workflows to run
 PR=$(GITHUB_TOKEN="$BOT_GITHUB_TOKEN" gh pr create --title "[chore] Prepare release ${RELEASE_VERSION}" --body "
 The following commands were run to prepare this release:
