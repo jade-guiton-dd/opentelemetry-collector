@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
-	"go.opentelemetry.io/collector/config/configoptional"
 )
 
 type SanitizedURLPath string
@@ -52,8 +51,8 @@ type HTTPConfig struct {
 
 // Protocols is the configuration for the supported protocols.
 type Protocols struct {
-	GRPC configoptional.Optional[configgrpc.ServerConfig] `mapstructure:"grpc"`
-	HTTP configoptional.Optional[HTTPConfig]              `mapstructure:"http"`
+	GRPC Optional[configgrpc.ServerConfig] `mapstructure:"grpc"`
+	HTTP Optional[HTTPConfig]              `mapstructure:"http"`
 	// prevent unkeyed literal initialization
 	_ struct{}
 }
@@ -68,7 +67,7 @@ var _ component.Config = (*Config)(nil)
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	if !cfg.GRPC.HasValue() && !cfg.HTTP.HasValue() {
+	if !cfg.GRPC.Enabled && !cfg.HTTP.Enabled {
 		return errors.New("must specify at least one protocol when using the OTLP receiver")
 	}
 	return nil

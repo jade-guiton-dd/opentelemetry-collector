@@ -88,11 +88,11 @@ func newOtlpReceiver(cfg *Config, set *receiver.Settings) (*otlpReceiver, error)
 
 func (r *otlpReceiver) startGRPCServer(host component.Host) error {
 	// If GRPC is not enabled, nothing to start.
-	if !r.cfg.GRPC.HasValue() {
+	if !r.cfg.GRPC.Enabled {
 		return nil
 	}
 
-	grpcCfg := r.cfg.GRPC.Get()
+	grpcCfg := &r.cfg.GRPC.Value
 	var err error
 	if r.serverGRPC, err = grpcCfg.ToServer(context.Background(), host, r.settings.TelemetrySettings); err != nil {
 		return err
@@ -133,11 +133,11 @@ func (r *otlpReceiver) startGRPCServer(host component.Host) error {
 
 func (r *otlpReceiver) startHTTPServer(ctx context.Context, host component.Host) error {
 	// If HTTP is not enabled, nothing to start.
-	if !r.cfg.HTTP.HasValue() {
+	if !r.cfg.HTTP.Enabled {
 		return nil
 	}
 
-	httpCfg := r.cfg.HTTP.Get()
+	httpCfg := &r.cfg.HTTP.Value
 	httpMux := http.NewServeMux()
 	if r.nextTraces != nil {
 		httpTracesReceiver := trace.New(r.nextTraces, r.obsrepHTTP)

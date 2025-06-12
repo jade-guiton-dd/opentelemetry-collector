@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"go.opentelemetry.io/collector/confmap"
 	"go.uber.org/multierr"
 )
 
@@ -109,6 +110,12 @@ func checkStructFieldTags(f reflect.StructField) error {
 				return fmt.Errorf(`attempt to use "remain" on non-map or interface type field %q`, f.Name)
 			}
 		}
+	}
+
+	// If the field type implements FieldUnmarshaler, mapstructure will not look inside it, so no need
+	// to check inside it ourselves.
+	if reflect.PointerTo(f.Type).Implements(reflect.TypeFor[confmap.FieldUnmarshaler]()) {
+		return nil
 	}
 
 	switch f.Type.Kind() {

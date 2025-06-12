@@ -17,24 +17,16 @@ import (
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/confignet"
 	"go.opentelemetry.io/collector/config/configopaque"
-	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
 )
 
-// GetOrInsertDefault is a helper function to get or insert a default value for a configoptional.Optional type.
-func GetOrInsertDefault[T any](t *testing.T, opt *configoptional.Optional[T]) *T {
-	if opt.HasValue() {
-		return opt.Get()
-	}
-
-	empty := confmap.NewFromStringMap(map[string]any{})
-	require.NoError(t, empty.Unmarshal(opt))
-	val := opt.Get()
-	require.NotNil(t, "Expected a default value to be set for %T", val)
-	return val
+// GetOrInsertDefault is a helper function to get or insert a default value for a Optional type.
+func GetOrInsertDefault[T any](t *testing.T, opt *Optional[T]) *T {
+	opt.Enabled = true
+	return &opt.Value
 }
 
 func TestUnmarshalDefaultConfig(t *testing.T) {
@@ -106,7 +98,7 @@ func TestUnmarshalConfig(t *testing.T) {
 	assert.Equal(t,
 		&Config{
 			Protocols: Protocols{
-				GRPC: configoptional.Some(configgrpc.ServerConfig{
+				GRPC: Some(configgrpc.ServerConfig{
 					NetAddr: confignet.AddrConfig{
 						Endpoint:  "localhost:4317",
 						Transport: confignet.TransportTypeTCP,
@@ -135,7 +127,7 @@ func TestUnmarshalConfig(t *testing.T) {
 						},
 					},
 				}),
-				HTTP: configoptional.Some(HTTPConfig{
+				HTTP: Some(HTTPConfig{
 					ServerConfig: confighttp.ServerConfig{
 						Auth: &confighttp.AuthConfig{
 							Config: configauth.Config{
@@ -176,7 +168,7 @@ func TestUnmarshalConfigUnix(t *testing.T) {
 	assert.Equal(t,
 		&Config{
 			Protocols: Protocols{
-				GRPC: configoptional.Some(configgrpc.ServerConfig{
+				GRPC: Some(configgrpc.ServerConfig{
 					NetAddr: confignet.AddrConfig{
 						Endpoint:  "/tmp/grpc_otlp.sock",
 						Transport: confignet.TransportTypeUnix,
@@ -184,7 +176,7 @@ func TestUnmarshalConfigUnix(t *testing.T) {
 					ReadBufferSize: 512 * 1024,
 					Keepalive:      ptr(configgrpc.NewDefaultKeepaliveServerConfig()),
 				}),
-				HTTP: configoptional.Some(HTTPConfig{
+				HTTP: Some(HTTPConfig{
 					ServerConfig: confighttp.ServerConfig{
 						Endpoint:        "/tmp/http_otlp.sock",
 						CORS:            ptr(confighttp.NewDefaultCORSConfig()),

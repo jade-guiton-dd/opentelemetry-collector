@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/confignet"
-	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/consumer/xconsumer"
@@ -85,7 +84,7 @@ func TestCreateSameReceiver(t *testing.T) {
 
 func TestCreateTraces(t *testing.T) {
 	factory := NewFactory()
-	defaultGRPCSettings := configoptional.Some(configgrpc.ServerConfig{
+	defaultGRPCSettings := Some(configgrpc.ServerConfig{
 		NetAddr: confignet.AddrConfig{
 			Endpoint:  testutil.GetAvailableLocalAddress(t),
 			Transport: confignet.TransportTypeTCP,
@@ -93,7 +92,7 @@ func TestCreateTraces(t *testing.T) {
 	})
 	defaultServerConfig := confighttp.NewDefaultServerConfig()
 	defaultServerConfig.Endpoint = testutil.GetAvailableLocalAddress(t)
-	defaultHTTPSettings := configoptional.Some(HTTPConfig{
+	defaultHTTPSettings := Some(HTTPConfig{
 		ServerConfig:   defaultServerConfig,
 		TracesURLPath:  defaultTracesURLPath,
 		MetricsURLPath: defaultMetricsURLPath,
@@ -121,7 +120,7 @@ func TestCreateTraces(t *testing.T) {
 			name: "invalid_grpc_port",
 			cfg: &Config{
 				Protocols: Protocols{
-					GRPC: configoptional.Some(configgrpc.ServerConfig{
+					GRPC: Some(configgrpc.ServerConfig{
 						NetAddr: confignet.AddrConfig{
 							Endpoint:  "localhost:112233",
 							Transport: confignet.TransportTypeTCP,
@@ -138,7 +137,7 @@ func TestCreateTraces(t *testing.T) {
 			cfg: &Config{
 				Protocols: Protocols{
 					GRPC: defaultGRPCSettings,
-					HTTP: configoptional.Some(HTTPConfig{
+					HTTP: Some(HTTPConfig{
 						ServerConfig: confighttp.ServerConfig{
 							Endpoint: "localhost:112233",
 						},
@@ -179,7 +178,7 @@ func TestCreateTraces(t *testing.T) {
 
 func TestCreateMetric(t *testing.T) {
 	factory := NewFactory()
-	defaultGRPCSettings := configoptional.Some(configgrpc.ServerConfig{
+	defaultGRPCSettings := Some(configgrpc.ServerConfig{
 		NetAddr: confignet.AddrConfig{
 			Endpoint:  "127.0.0.1:0",
 			Transport: confignet.TransportTypeTCP,
@@ -187,7 +186,7 @@ func TestCreateMetric(t *testing.T) {
 	})
 	defaultServerConfig := confighttp.NewDefaultServerConfig()
 	defaultServerConfig.Endpoint = "127.0.0.1:0"
-	defaultHTTPSettings := configoptional.Some(HTTPConfig{
+	defaultHTTPSettings := Some(HTTPConfig{
 		ServerConfig:   defaultServerConfig,
 		TracesURLPath:  defaultTracesURLPath,
 		MetricsURLPath: defaultMetricsURLPath,
@@ -215,7 +214,7 @@ func TestCreateMetric(t *testing.T) {
 			name: "invalid_grpc_address",
 			cfg: &Config{
 				Protocols: Protocols{
-					GRPC: configoptional.Some(configgrpc.ServerConfig{
+					GRPC: Some(configgrpc.ServerConfig{
 						NetAddr: confignet.AddrConfig{
 							Endpoint:  "327.0.0.1:1122",
 							Transport: confignet.TransportTypeTCP,
@@ -232,7 +231,7 @@ func TestCreateMetric(t *testing.T) {
 			cfg: &Config{
 				Protocols: Protocols{
 					GRPC: defaultGRPCSettings,
-					HTTP: configoptional.Some(HTTPConfig{
+					HTTP: Some(HTTPConfig{
 						ServerConfig: confighttp.ServerConfig{
 							Endpoint: "327.0.0.1:1122",
 						},
@@ -273,7 +272,7 @@ func TestCreateMetric(t *testing.T) {
 
 func TestCreateLogs(t *testing.T) {
 	factory := NewFactory()
-	defaultGRPCSettings := configoptional.Some(configgrpc.ServerConfig{
+	defaultGRPCSettings := Some(configgrpc.ServerConfig{
 		NetAddr: confignet.AddrConfig{
 			Endpoint:  testutil.GetAvailableLocalAddress(t),
 			Transport: confignet.TransportTypeTCP,
@@ -281,7 +280,7 @@ func TestCreateLogs(t *testing.T) {
 	})
 	defaultServerConfig := confighttp.NewDefaultServerConfig()
 	defaultServerConfig.Endpoint = testutil.GetAvailableLocalAddress(t)
-	defaultHTTPSettings := configoptional.Some(HTTPConfig{
+	defaultHTTPSettings := Some(HTTPConfig{
 		ServerConfig:   defaultServerConfig,
 		TracesURLPath:  defaultTracesURLPath,
 		MetricsURLPath: defaultMetricsURLPath,
@@ -309,7 +308,7 @@ func TestCreateLogs(t *testing.T) {
 			name: "invalid_grpc_address",
 			cfg: &Config{
 				Protocols: Protocols{
-					GRPC: configoptional.Some(configgrpc.ServerConfig{
+					GRPC: Some(configgrpc.ServerConfig{
 						NetAddr: confignet.AddrConfig{
 							Endpoint:  "327.0.0.1:1122",
 							Transport: confignet.TransportTypeTCP,
@@ -326,7 +325,7 @@ func TestCreateLogs(t *testing.T) {
 			cfg: &Config{
 				Protocols: Protocols{
 					GRPC: defaultGRPCSettings,
-					HTTP: configoptional.Some(HTTPConfig{
+					HTTP: Some(HTTPConfig{
 						ServerConfig: confighttp.ServerConfig{
 							Endpoint: "327.0.0.1:1122",
 						},
@@ -367,7 +366,7 @@ func TestCreateLogs(t *testing.T) {
 
 func TestCreateProfiles(t *testing.T) {
 	factory := NewFactory()
-	defaultGRPCSettings := configoptional.Some(configgrpc.ServerConfig{
+	defaultGRPCSettings := Some(configgrpc.ServerConfig{
 		NetAddr: confignet.AddrConfig{
 			Endpoint:  testutil.GetAvailableLocalAddress(t),
 			Transport: confignet.TransportTypeTCP,
@@ -375,7 +374,7 @@ func TestCreateProfiles(t *testing.T) {
 	})
 	defaultServerConfig := confighttp.NewDefaultServerConfig()
 	defaultServerConfig.Endpoint = testutil.GetAvailableLocalAddress(t)
-	defaultHTTPSettings := configoptional.Some(HTTPConfig{
+	defaultHTTPSettings := Some(HTTPConfig{
 		ServerConfig:   defaultServerConfig,
 		TracesURLPath:  defaultTracesURLPath,
 		MetricsURLPath: defaultMetricsURLPath,
@@ -403,7 +402,7 @@ func TestCreateProfiles(t *testing.T) {
 			name: "invalid_grpc_port",
 			cfg: &Config{
 				Protocols: Protocols{
-					GRPC: configoptional.Some(configgrpc.ServerConfig{
+					GRPC: Some(configgrpc.ServerConfig{
 						NetAddr: confignet.AddrConfig{
 							Endpoint:  "localhost:112233",
 							Transport: confignet.TransportTypeTCP,
@@ -420,7 +419,7 @@ func TestCreateProfiles(t *testing.T) {
 			cfg: &Config{
 				Protocols: Protocols{
 					GRPC: defaultGRPCSettings,
-					HTTP: configoptional.Some(HTTPConfig{
+					HTTP: Some(HTTPConfig{
 						ServerConfig: confighttp.ServerConfig{
 							Endpoint: "localhost:112233",
 						},
