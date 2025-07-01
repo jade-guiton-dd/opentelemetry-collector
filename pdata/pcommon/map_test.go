@@ -4,6 +4,7 @@
 package pcommon
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -700,5 +701,50 @@ func BenchmarkMapEqual(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		_ = m.Equal(cmp)
+	}
+}
+
+var testKeys = []string{"aardvark", "abacus", "abandon", "abashed", "abate", "abbey", "abbreviate", "abdicate"}
+var testValue = "testvalue"
+
+func BenchmarkPut(b *testing.B) {
+	for range b.N {
+		m := NewMap()
+		m.EnsureCapacity(len(testKeys))
+		for _, k := range testKeys {
+			m.PutStr(k, testValue)
+		}
+		runtime.KeepAlive(m)
+	}
+}
+
+func BenchmarkFromRaw(b *testing.B) {
+	for range b.N {
+		raw := make(map[string]any, len(testKeys))
+		for _, k := range testKeys {
+			raw[k] = testValue
+		}
+		m := NewMap()
+		m.FromRaw(raw)
+		runtime.KeepAlive(m)
+	}
+}
+
+func BenchmarkFromRawSlice(b *testing.B) {
+	for range b.N {
+		raw := make([]otlpcommon.KeyValue, 0, len(testKeys))
+		for _, k := range testKeys {
+			raw = append(raw, otlpcommon.KeyValue{
+				Key: k,
+				Value: otlpcommon.AnyValue{
+					Value: &otlpcommon.AnyValue_StringValue{
+						StringValue: testValue,
+					},
+				},
+			})
+		}
+		m := NewMap()
+		m.FromRawSlice(raw)
+		runtime.KeepAlive(m)
 	}
 }

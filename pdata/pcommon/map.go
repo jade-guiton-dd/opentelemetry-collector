@@ -4,7 +4,9 @@
 package pcommon // import "go.opentelemetry.io/collector/pdata/pcommon"
 
 import (
+	"cmp"
 	"iter"
+	"slices"
 
 	"go.uber.org/multierr"
 
@@ -290,6 +292,29 @@ func (m Map) FromRaw(rawMap map[string]any) error {
 	}
 	*m.getOrig() = origs
 	return errs
+}
+
+func (m Map) FromRawSlice(rawSlice []otlpcommon.KeyValue) {
+	m.getState().AssertMutable()
+	if len(rawSlice) == 0 {
+		*m.getOrig() = nil
+		return
+	}
+
+	// Remove duplicate keys
+	slices.SortFunc(rawSlice, func(kv1 otlpcommon.KeyValue, kv2 otlpcommon.KeyValue) int {
+		return cmp.Compare(kv1.Key, kv2.Key)
+	})
+	n := 0
+	for i, kv := range rawSlice {
+		if n == 0 || kv.Key != rawSlice[n-1].Key {
+			if i != n {
+				rawSlice[n] = kv
+			}
+			n++
+		}
+	}
+	*m.getOrig() = rawSlice[:n]
 }
 
 // Equal checks equality with another Map
