@@ -1221,67 +1221,61 @@ func accumulateBuilder(keys []string) pcommon.Map {
 
 func Benchmark(b *testing.B) {
 	data := generateBenchData()
-	b.ResetTimer()
 	i := 0
 	for b.Loop() {
-		keys := data[i%len(data)]
-		i++
+		keys := slices.Clone(data[i%len(data)])
 		_ = accumulate(keys)
+		i++
 	}
 }
 
 func BenchmarkUnsafe(b *testing.B) {
 	data := generateBenchData()
-	b.ResetTimer()
 	i := 0
 	for b.Loop() {
-		keys := data[i%len(data)]
-		i++
+		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateUnsafe(keys)
+		i++
 	}
 }
 
 func BenchmarkSorted(b *testing.B) {
 	data := generateBenchData()
-	b.ResetTimer()
 	i := 0
 	for b.Loop() {
-		keys := data[i%len(data)]
-		i++
+		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateSorted(keys)
+		i++
 	}
 }
 
 func BenchmarkMap(b *testing.B) {
 	data := generateBenchData()
-	b.ResetTimer()
 	i := 0
 	for b.Loop() {
-		keys := data[i%len(data)]
-		i++
+		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateMap(keys)
+		i++
 	}
 }
 
 func BenchmarkSortedBuilder(b *testing.B) {
 	data := generateBenchData()
-	b.ResetTimer()
 	i := 0
 	for b.Loop() {
-		keys := data[i%len(data)]
-		i++
+		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateSortedBuilder(keys)
+		i++
 	}
 }
 
 func BenchmarkBuilder(b *testing.B) {
 	data := generateBenchData()
-	b.ResetTimer()
 	i := 0
 	for b.Loop() {
-		keys := data[i%len(data)]
-		i++
+		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateBuilder(keys)
+		i++
 	}
 }
 
