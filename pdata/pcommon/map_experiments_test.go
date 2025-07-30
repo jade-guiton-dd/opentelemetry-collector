@@ -1,6 +1,7 @@
 package pcommon_test
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -1012,7 +1013,7 @@ var BENCH_KEY_SETS = [][]uint8{
 	{2, 19, 115, 91, 75, 83, 109, 20, 27, 116, 103, 61, 97, 28, 36, 37, 47, 132, 48, 127, 6, 104, 49, 55, 120, 3, 98, 128, 121, 19, 92, 110, 93, 126, 129, 61, 29, 68, 61, 105, 143, 137, 11, 7, 30, 133, 50, 31, 144, 62, 32, 69, 138, 99, 38, 76, 76, 76, 117, 94, 130, 131, 134, 141, 150, 84, 8},
 }
 
-func generateBenchData() [][]string {
+func generateRealisticBenchData() [][]string {
 	data := make([][]string, len(BENCH_KEY_SETS))
 	for i, set := range BENCH_KEY_SETS {
 		data[i] = make([]string, len(set))
@@ -1022,6 +1023,17 @@ func generateBenchData() [][]string {
 	}
 	return data
 }
+
+func generateWorstCaseBenchData() [][]string {
+	data := make([][]string, 1)
+	data[0] = make([]string, 0, 200)
+	for i := range 200 {
+		data[0] = append(data[0], fmt.Sprintf("%060d", i))
+	}
+	return data
+}
+
+var generateBenchData func() [][]string = generateRealisticBenchData
 
 func accumulateGetPut(keys []string) pcommon.Map {
 	m := pcommon.NewMap()
@@ -1137,6 +1149,30 @@ func accumulateSortPutUnsafe(keys []string) pcommon.Map {
 	}
 	if streak == 1 {
 		curSlot.SetStr(BENCH_VAL)
+	}
+	return m
+}
+
+func accumulateGetPutSorted(keys []string) pcommon.SortedMap {
+	m := pcommon.NewSortedMap()
+	m.EnsureCapacity(len(keys))
+	for _, key := range keys {
+		if val, found := m.Get(key); found {
+			var slice pcommon.Slice
+			switch val.Type() {
+			case pcommon.ValueTypeStr:
+				str := val.Str()
+				slice = val.SetEmptySlice()
+				slice.AppendEmpty().SetStr(str)
+			case pcommon.ValueTypeSlice:
+				slice = val.Slice()
+			default:
+				panic("unreachable")
+			}
+			slice.AppendEmpty().SetStr(BENCH_VAL)
+			continue
+		}
+		m.PutStr(key, BENCH_VAL)
 	}
 	return m
 }
@@ -1337,6 +1373,16 @@ func BenchmarkSortPutUnsafe(b *testing.B) {
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateSortPutUnsafe(keys)
+		i++
+	}
+}
+
+func BenchmarkGetPutSorted(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateGetPutSorted(keys)
 		i++
 	}
 }

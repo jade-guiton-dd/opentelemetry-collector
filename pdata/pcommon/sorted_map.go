@@ -46,9 +46,29 @@ func (m SortedMap) EnsureCapacity(capacity int) {
 
 func (m SortedMap) find(key string) (int, bool) {
 	slice := *m.getOrig()
+
+	if len(slice) < 8 {
+		for i := range slice {
+			key2 := slice[i].Key
+			if key2 == key {
+				return i, true
+			} else if key2 > key {
+				return i, false
+			}
+		}
+		return len(slice), false
+	}
+
 	return slices.BinarySearchFunc(slice, key, func(kv otlpcommon.KeyValue, target string) int {
 		return cmp.Compare(kv.Key, target)
 	})
+}
+
+func (m SortedMap) Get(key string) (Value, bool) {
+	if i, found := m.find(key); found {
+		return newValue(&(*m.getOrig())[i].Value, m.getState()), true
+	}
+	return newValue(nil, m.getState()), false
 }
 
 // PutEmpty inserts or updates an empty value to the map under given key
@@ -63,4 +83,15 @@ func (m SortedMap) PutEmpty(k string) Value {
 	}
 	*m.getOrig() = slices.Insert(*m.getOrig(), i, otlpcommon.KeyValue{Key: k})
 	return newValue(&(*m.getOrig())[i].Value, m.getState())
+}
+
+func (m SortedMap) PutStr(k string, v string) {
+	m.getState().AssertMutable()
+	i, existing := m.find(k)
+	if existing {
+		av := newValue(&(*m.getOrig())[i].Value, m.getState())
+		av.SetStr(v)
+	} else {
+		*m.getOrig() = slices.Insert(*m.getOrig(), i, newKeyValueString(k, v))
+	}
 }
