@@ -4,7 +4,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
@@ -1024,7 +1023,55 @@ func generateBenchData() [][]string {
 	return data
 }
 
-func accumulate(keys []string) pcommon.Map {
+func accumulateGetPut(keys []string) pcommon.Map {
+	m := pcommon.NewMap()
+	m.EnsureCapacity(len(keys))
+	for _, key := range keys {
+		if val, found := m.Get(key); found {
+			var slice pcommon.Slice
+			switch val.Type() {
+			case pcommon.ValueTypeStr:
+				str := val.Str()
+				slice = val.SetEmptySlice()
+				slice.AppendEmpty().SetStr(str)
+			case pcommon.ValueTypeSlice:
+				slice = val.Slice()
+			default:
+				panic("unreachable")
+			}
+			slice.AppendEmpty().SetStr(BENCH_VAL)
+			continue
+		}
+		m.PutStr(key, BENCH_VAL)
+	}
+	return m
+}
+
+func accumulateFromRaw(keys []string) pcommon.Map {
+	m := make(map[string]any, len(keys))
+	for _, key := range keys {
+		if val, found := m[key]; found {
+			var vals []any
+			switch val := val.(type) {
+			case string:
+				vals = make([]any, 0, 2)
+				vals = append(vals, val)
+			case []any:
+				vals = val
+			default:
+				panic("unreachable")
+			}
+			m[key] = append(vals, BENCH_VAL)
+			continue
+		}
+		m[key] = BENCH_VAL
+	}
+	m2 := pcommon.NewMap()
+	m2.FromRaw(m)
+	return m2
+}
+
+func accumulateSortPut(keys []string) pcommon.Map {
 	m := pcommon.NewMap()
 	m.EnsureCapacity(len(keys))
 
@@ -1059,7 +1106,7 @@ func accumulate(keys []string) pcommon.Map {
 	return m
 }
 
-func accumulateUnsafe(keys []string) pcommon.Map {
+func accumulateSortPutUnsafe(keys []string) pcommon.Map {
 	m := pcommon.NewMap()
 	m.EnsureCapacity(len(keys))
 
@@ -1094,42 +1141,7 @@ func accumulateUnsafe(keys []string) pcommon.Map {
 	return m
 }
 
-func accumulateLessUnsafe(keys []string) pcommon.Map {
-	m := pcommon.NewMap()
-	m.EnsureCapacity(len(keys))
-
-	slices.Sort(keys)
-
-	var prevKey string
-	var streak int
-	var curSlot pcommon.Value
-	for _, key := range keys {
-		duplicate := streak > 0 && key == prevKey
-		if streak == 1 {
-			if duplicate {
-				slice := curSlot.SetEmptySlice()
-				slice.EnsureCapacity(3)
-				slice.AppendEmpty().SetStr(BENCH_VAL)
-			} else {
-				curSlot.SetStr(BENCH_VAL)
-			}
-		}
-		if duplicate {
-			curSlot.Slice().AppendEmpty().SetStr(BENCH_VAL)
-			streak++
-		} else {
-			curSlot = m.PutEmptyLessUnsafe(key)
-			streak = 1
-		}
-		prevKey = key
-	}
-	if streak == 1 {
-		curSlot.SetStr(BENCH_VAL)
-	}
-	return m
-}
-
-func accumulateSorted(keys []string) pcommon.SortedMap {
+func accumulateSortPutSorted(keys []string) pcommon.SortedMap {
 	m := pcommon.NewSortedMap()
 	m.EnsureCapacity(len(keys))
 
@@ -1164,7 +1176,7 @@ func accumulateSorted(keys []string) pcommon.SortedMap {
 	return m
 }
 
-func accumulateMap(keys []string) pcommon.MapMap {
+func accumulateSortPutMap(keys []string) pcommon.MapMap {
 	m := pcommon.NewMapMap()
 	m.EnsureCapacity(len(keys))
 
@@ -1199,7 +1211,7 @@ func accumulateMap(keys []string) pcommon.MapMap {
 	return m
 }
 
-func accumulateSortedBuilder(keys []string) pcommon.Map {
+func accumulateSortedMapBuilder(keys []string) pcommon.Map {
 	var smb pcommon.SortedMapBuilder
 	smb.EnsureCapacity(len(keys))
 
@@ -1234,8 +1246,43 @@ func accumulateSortedBuilder(keys []string) pcommon.Map {
 	return smb.IntoMap()
 }
 
-func accumulateBuilder(keys []string) pcommon.Map {
-	var smb pcommon.MapBuilder
+func accumulateDistinctMapBuilder(keys []string) pcommon.Map {
+	var umb pcommon.UniqueMapBuilder
+	umb.EnsureCapacity(len(keys))
+
+	slices.Sort(keys)
+
+	var prevKey string
+	var streak int
+	var curSlot pcommon.Value
+	for _, key := range keys {
+		duplicate := streak > 0 && key == prevKey
+		if streak == 1 {
+			if duplicate {
+				slice := curSlot.SetEmptySlice()
+				slice.EnsureCapacity(3)
+				slice.AppendEmpty().SetStr(BENCH_VAL)
+			} else {
+				curSlot.SetStr(BENCH_VAL)
+			}
+		}
+		if duplicate {
+			curSlot.Slice().AppendEmpty().SetStr(BENCH_VAL)
+			streak++
+		} else {
+			curSlot = umb.PutEmpty(key)
+			streak = 1
+		}
+		prevKey = key
+	}
+	if streak == 1 {
+		curSlot.SetStr(BENCH_VAL)
+	}
+	return umb.IntoMap()
+}
+
+func accumulateMergingMapBuilder(keys []string) pcommon.Map {
+	var smb pcommon.GenericMapBuilder
 	smb.EnsureCapacity(len(keys))
 	for _, key := range keys {
 		smb.PutEmpty(key).SetStr(BENCH_VAL)
@@ -1254,120 +1301,12 @@ func accumulateBuilder(keys []string) pcommon.Map {
 	})
 }
 
-func accumulateFromRaw(keys []string) pcommon.Map {
-	m := make(map[string]any, len(keys))
-	for _, key := range keys {
-		if val, found := m[key]; found {
-			var vals []any
-			switch val := val.(type) {
-			case string:
-				vals = make([]any, 0, 2)
-				vals = append(vals, val)
-			case []any:
-				vals = val
-			default:
-				panic("unreachable")
-			}
-			m[key] = append(vals, BENCH_VAL)
-			continue
-		}
-		m[key] = BENCH_VAL
-	}
-	m2 := pcommon.NewMap()
-	m2.FromRaw(m)
-	return m2
-}
-
-func accumulateGetPut(keys []string) pcommon.Map {
-	m := pcommon.NewMap()
-	m.EnsureCapacity(len(keys))
-	for _, key := range keys {
-		if val, found := m.Get(key); found {
-			var vals pcommon.Slice
-			switch val.Type() {
-			case pcommon.ValueTypeStr:
-				str := val.Str()
-				vals = val.SetEmptySlice()
-				vals.AppendEmpty().SetStr(str)
-			case pcommon.ValueTypeSlice:
-				vals = val.Slice()
-			default:
-				panic("unreachable")
-			}
-			vals.AppendEmpty().SetStr(BENCH_VAL)
-			continue
-		}
-		m.PutStr(key, BENCH_VAL)
-	}
-	return m
-}
-
-func Benchmark(b *testing.B) {
+func BenchmarkGetPut(b *testing.B) {
 	data := generateBenchData()
 	i := 0
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
-		_ = accumulate(keys)
-		i++
-	}
-}
-
-func BenchmarkUnsafe(b *testing.B) {
-	data := generateBenchData()
-	i := 0
-	for b.Loop() {
-		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateUnsafe(keys)
-		i++
-	}
-}
-
-func BenchmarkLessUnsafe(b *testing.B) {
-	data := generateBenchData()
-	i := 0
-	for b.Loop() {
-		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateLessUnsafe(keys)
-		i++
-	}
-}
-
-func BenchmarkSorted(b *testing.B) {
-	data := generateBenchData()
-	i := 0
-	for b.Loop() {
-		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateSorted(keys)
-		i++
-	}
-}
-
-func BenchmarkMap(b *testing.B) {
-	data := generateBenchData()
-	i := 0
-	for b.Loop() {
-		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateMap(keys)
-		i++
-	}
-}
-
-func BenchmarkSortedBuilder(b *testing.B) {
-	data := generateBenchData()
-	i := 0
-	for b.Loop() {
-		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateSortedBuilder(keys)
-		i++
-	}
-}
-
-func BenchmarkBuilder(b *testing.B) {
-	data := generateBenchData()
-	i := 0
-	for b.Loop() {
-		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateBuilder(keys)
+		_ = accumulateGetPut(keys)
 		i++
 	}
 }
@@ -1382,17 +1321,77 @@ func BenchmarkFromRaw(b *testing.B) {
 	}
 }
 
-func BenchmarkGetPut(b *testing.B) {
+func BenchmarkSortPut(b *testing.B) {
 	data := generateBenchData()
 	i := 0
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
-		_ = accumulateGetPut(keys)
+		_ = accumulateSortPut(keys)
 		i++
 	}
 }
 
-func TestOriginal(t *testing.T) {
+func BenchmarkSortPutUnsafe(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateSortPutUnsafe(keys)
+		i++
+	}
+}
+
+func BenchmarkSortPutSorted(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateSortPutSorted(keys)
+		i++
+	}
+}
+
+func BenchmarkSortPutMap(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateSortPutMap(keys)
+		i++
+	}
+}
+
+func BenchmarkSortedMapBuilder(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateSortedMapBuilder(keys)
+		i++
+	}
+}
+
+func BenchmarkDistinctMapBuilder(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateDistinctMapBuilder(keys)
+		i++
+	}
+}
+
+func BenchmarkMergingMapBuilder(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateMergingMapBuilder(keys)
+		i++
+	}
+}
+
+func TestSortPut(t *testing.T) {
 	data := generateBenchData()
 	for _, keys := range data {
 		keyCount := map[string]int{}
@@ -1400,7 +1399,7 @@ func TestOriginal(t *testing.T) {
 			keyCount[k]++
 		}
 
-		m := accumulate(keys)
+		m := accumulateSortPut(keys)
 		for k, v := range m.All() {
 			count := 1
 			if v.Type() == pcommon.ValueTypeSlice {
@@ -1416,29 +1415,4 @@ func TestOriginal(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestMapRemove(t *testing.T) {
-	m := pcommon.NewMap()
-	m.PutStr("a", "a")
-	m.PutStr("b", "b")
-	m.PutStr("c", "c")
-
-	va, ok := m.Get("a")
-	assert.True(t, ok)
-	vc, ok := m.Get("c")
-	assert.True(t, ok)
-
-	assert.Equal(t, "a", va.Str())
-	assert.Equal(t, "c", vc.Str())
-
-	m.Remove("a")
-
-	assert.Equal(t, "c", va.Str())
-	assert.Equal(t, "c", vc.Str())
-
-	m.PutStr("d", "d")
-
-	assert.Equal(t, "c", va.Str())
-	assert.Equal(t, "d", vc.Str())
 }

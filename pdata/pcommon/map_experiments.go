@@ -9,11 +9,6 @@ import (
 )
 
 func (m Map) PutEmptyUnsafe(k string) Value {
-	*m.getOrig() = append(*m.getOrig(), otlpcommon.KeyValue{Key: k})
-	return newValue(&(*m.getOrig())[len(*m.getOrig())-1].Value, m.getState())
-}
-
-func (m Map) PutEmptyLessUnsafe(k string) Value {
 	m.getState().AssertMutable()
 	*m.getOrig() = append(*m.getOrig(), otlpcommon.KeyValue{Key: k})
 	return newValue(&(*m.getOrig())[len(*m.getOrig())-1].Value, m.getState())
@@ -45,12 +40,12 @@ func (mb *SortedMapBuilder) IntoMap() Map {
 	return newMap(&mb.values, &mb.state)
 }
 
-type MapBuilder struct {
+type UniqueMapBuilder struct {
 	state  internal.State
 	values []otlpcommon.KeyValue
 }
 
-func (mb *MapBuilder) EnsureCapacity(capacity int) {
+func (mb *UniqueMapBuilder) EnsureCapacity(capacity int) {
 	oldValues := mb.values
 	if capacity <= cap(oldValues) {
 		return
@@ -59,12 +54,54 @@ func (mb *MapBuilder) EnsureCapacity(capacity int) {
 	copy(mb.values, oldValues)
 }
 
-func (mb *MapBuilder) PutEmpty(k string) Value {
+func (mb *UniqueMapBuilder) PutEmpty(k string) Value {
 	mb.values = append(mb.values, otlpcommon.KeyValue{Key: k})
 	return newValue(&mb.values[len(mb.values)-1].Value, &mb.state)
 }
 
-func (mb *MapBuilder) IntoMap(merge func(dst Value, src Value, firstMerge bool)) Map {
+func (mb *UniqueMapBuilder) IntoMap() Map {
+	if len(mb.values) == 0 {
+		return newMap(&mb.values, &mb.state)
+	}
+	slices.SortFunc(mb.values, func(kv1 otlpcommon.KeyValue, kv2 otlpcommon.KeyValue) int {
+		return cmp.Compare(kv1.Key, kv2.Key)
+	})
+	from := 1
+	to := 1
+	n := len(mb.values)
+	for from < n {
+		if mb.values[from].Key != mb.values[to-1].Key {
+			if from != to {
+				mb.values[to] = mb.values[from]
+			}
+			to++
+		}
+		from++
+	}
+	mb.values = mb.values[:to]
+	return newMap(&mb.values, &mb.state)
+}
+
+type GenericMapBuilder struct {
+	state  internal.State
+	values []otlpcommon.KeyValue
+}
+
+func (mb *GenericMapBuilder) EnsureCapacity(capacity int) {
+	oldValues := mb.values
+	if capacity <= cap(oldValues) {
+		return
+	}
+	mb.values = make([]otlpcommon.KeyValue, len(oldValues), capacity)
+	copy(mb.values, oldValues)
+}
+
+func (mb *GenericMapBuilder) PutEmpty(k string) Value {
+	mb.values = append(mb.values, otlpcommon.KeyValue{Key: k})
+	return newValue(&mb.values[len(mb.values)-1].Value, &mb.state)
+}
+
+func (mb *GenericMapBuilder) IntoMap(merge func(dst Value, src Value, firstMerge bool)) Map {
 	if len(mb.values) == 0 {
 		return newMap(&mb.values, &mb.state)
 	}
