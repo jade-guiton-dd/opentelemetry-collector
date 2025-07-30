@@ -1219,6 +1219,54 @@ func accumulateBuilder(keys []string) pcommon.Map {
 	})
 }
 
+func accumulateFromRaw(keys []string) pcommon.Map {
+	m := make(map[string]any, len(keys))
+	for _, key := range keys {
+		if val, found := m[key]; found {
+			var vals []any
+			switch val := val.(type) {
+			case string:
+				vals = make([]any, 0, 2)
+				vals = append(vals, val)
+			case []any:
+				vals = val
+			default:
+				panic("unreachable")
+			}
+			m[key] = append(vals, BENCH_VAL)
+			continue
+		}
+		m[key] = BENCH_VAL
+	}
+	m2 := pcommon.NewMap()
+	m2.FromRaw(m)
+	return m2
+}
+
+func accumulateGetPut(keys []string) pcommon.Map {
+	m := pcommon.NewMap()
+	m.EnsureCapacity(len(keys))
+	for _, key := range keys {
+		if val, found := m.Get(key); found {
+			var vals pcommon.Slice
+			switch val.Type() {
+			case pcommon.ValueTypeStr:
+				str := val.Str()
+				vals = val.SetEmptySlice()
+				vals.AppendEmpty().SetStr(str)
+			case pcommon.ValueTypeSlice:
+				vals = val.Slice()
+			default:
+				panic("unreachable")
+			}
+			vals.AppendEmpty().SetStr(BENCH_VAL)
+			continue
+		}
+		m.PutStr(key, BENCH_VAL)
+	}
+	return m
+}
+
 func Benchmark(b *testing.B) {
 	data := generateBenchData()
 	i := 0
@@ -1275,6 +1323,26 @@ func BenchmarkBuilder(b *testing.B) {
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateBuilder(keys)
+		i++
+	}
+}
+
+func BenchmarkFromRaw(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateFromRaw(keys)
+		i++
+	}
+}
+
+func BenchmarkGetPut(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateGetPut(keys)
 		i++
 	}
 }
