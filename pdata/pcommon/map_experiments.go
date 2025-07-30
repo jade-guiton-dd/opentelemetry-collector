@@ -13,6 +13,12 @@ func (m Map) PutEmptyUnsafe(k string) Value {
 	return newValue(&(*m.getOrig())[len(*m.getOrig())-1].Value, m.getState())
 }
 
+func (m Map) PutEmptyLessUnsafe(k string) Value {
+	m.getState().AssertMutable()
+	*m.getOrig() = append(*m.getOrig(), otlpcommon.KeyValue{Key: k})
+	return newValue(&(*m.getOrig())[len(*m.getOrig())-1].Value, m.getState())
+}
+
 type SortedMapBuilder struct {
 	state  internal.State
 	values []otlpcommon.KeyValue

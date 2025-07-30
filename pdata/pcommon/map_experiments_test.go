@@ -1094,6 +1094,41 @@ func accumulateUnsafe(keys []string) pcommon.Map {
 	return m
 }
 
+func accumulateLessUnsafe(keys []string) pcommon.Map {
+	m := pcommon.NewMap()
+	m.EnsureCapacity(len(keys))
+
+	slices.Sort(keys)
+
+	var prevKey string
+	var streak int
+	var curSlot pcommon.Value
+	for _, key := range keys {
+		duplicate := streak > 0 && key == prevKey
+		if streak == 1 {
+			if duplicate {
+				slice := curSlot.SetEmptySlice()
+				slice.EnsureCapacity(3)
+				slice.AppendEmpty().SetStr(BENCH_VAL)
+			} else {
+				curSlot.SetStr(BENCH_VAL)
+			}
+		}
+		if duplicate {
+			curSlot.Slice().AppendEmpty().SetStr(BENCH_VAL)
+			streak++
+		} else {
+			curSlot = m.PutEmptyLessUnsafe(key)
+			streak = 1
+		}
+		prevKey = key
+	}
+	if streak == 1 {
+		curSlot.SetStr(BENCH_VAL)
+	}
+	return m
+}
+
 func accumulateSorted(keys []string) pcommon.SortedMap {
 	m := pcommon.NewSortedMap()
 	m.EnsureCapacity(len(keys))
@@ -1283,6 +1318,16 @@ func BenchmarkUnsafe(b *testing.B) {
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateUnsafe(keys)
+		i++
+	}
+}
+
+func BenchmarkLessUnsafe(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateLessUnsafe(keys)
 		i++
 	}
 }
