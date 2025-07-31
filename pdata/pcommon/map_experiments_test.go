@@ -1083,6 +1083,44 @@ func accumulateFromRaw(keys []string) pcommon.Map {
 	return m2
 }
 
+var reusedMap = make(map[string]any, 200)
+var reusedSlices = func() [][]any {
+	slices := make([][]any, 0, 100)
+	for range 100 {
+		slices = append(slices, make([]any, 0, 100))
+	}
+	return slices
+}()
+
+func accumulateFromRawReuse(keys []string) pcommon.Map {
+	clear(reusedMap)
+
+	nextSlice := 0
+	for _, key := range keys {
+		if val, found := reusedMap[key]; found {
+			var vals []any
+			switch val := val.(type) {
+			case string:
+				vals = reusedSlices[nextSlice]
+				nextSlice++
+				vals = append(vals, val)
+			case []any:
+				vals = val
+			default:
+				panic("unreachable")
+			}
+			reusedMap[key] = append(vals, BENCH_VAL)
+			continue
+		}
+		reusedMap[key] = BENCH_VAL
+	}
+
+	m2 := pcommon.NewMap()
+	m2.FromRaw(reusedMap)
+
+	return m2
+}
+
 func accumulateSortPut(keys []string) pcommon.Map {
 	m := pcommon.NewMap()
 	m.EnsureCapacity(len(keys))
@@ -1353,6 +1391,16 @@ func BenchmarkFromRaw(b *testing.B) {
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateFromRaw(keys)
+		i++
+	}
+}
+
+func BenchmarkFromRawReuse(b *testing.B) {
+	data := generateBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateFromRawReuse(keys)
 		i++
 	}
 }
