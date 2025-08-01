@@ -1024,6 +1024,20 @@ func generateRealisticBenchData() [][]string {
 	return data
 }
 
+func generateDeduplicatedBenchData() [][]string {
+	data := make([][]string, len(BENCH_KEY_SETS))
+	for i, set := range BENCH_KEY_SETS {
+		data[i] = make([]string, 0, len(set))
+		for j, idx := range set {
+			if slices.Contains(set[:j], idx) {
+				continue
+			}
+			data[i] = append(data[i], BENCH_KEYS[idx])
+		}
+	}
+	return data
+}
+
 func generateWorstCaseBenchData() [][]string {
 	data := make([][]string, 1)
 	data[0] = make([]string, 0, 200)
@@ -1375,6 +1389,53 @@ func accumulateMergingMapBuilder(keys []string) pcommon.Map {
 	})
 }
 
+func accumulateDedupGetPut(keys []string) pcommon.Map {
+	m := pcommon.NewMap()
+	m.EnsureCapacity(len(keys))
+	for _, key := range keys {
+		m.PutStr(key, BENCH_VAL)
+	}
+	return m
+}
+
+func accumulateDedupGetPutUnsafe(keys []string) pcommon.Map {
+	m := pcommon.NewMap()
+	m.EnsureCapacity(len(keys))
+	for _, key := range keys {
+		m.PutEmptyUnsafe(key).SetStr(BENCH_VAL)
+	}
+	return m
+}
+
+func accumulateDedupFromRaw(keys []string) pcommon.Map {
+	m := make(map[string]any, len(keys))
+	for _, key := range keys {
+		m[key] = BENCH_VAL
+	}
+	m2 := pcommon.NewMap()
+	m2.FromRaw(m)
+	return m2
+}
+
+func accumulateDedupFromRawReuse(keys []string) pcommon.Map {
+	clear(reusedMap)
+	for _, key := range keys {
+		reusedMap[key] = BENCH_VAL
+	}
+	m2 := pcommon.NewMap()
+	m2.FromRaw(reusedMap)
+	return m2
+}
+
+func accumulateDedupDistinctMapBuilder(keys []string) pcommon.Map {
+	var umb pcommon.UniqueMapBuilder
+	umb.EnsureCapacity(len(keys))
+	for _, key := range keys {
+		umb.PutEmpty(key).SetStr(BENCH_VAL)
+	}
+	return umb.IntoMap()
+}
+
 func BenchmarkGetPut(b *testing.B) {
 	data := generateBenchData()
 	i := 0
@@ -1481,6 +1542,56 @@ func BenchmarkMergingMapBuilder(b *testing.B) {
 	for b.Loop() {
 		keys := slices.Clone(data[i%len(data)])
 		_ = accumulateMergingMapBuilder(keys)
+		i++
+	}
+}
+
+func BenchmarkDedupGetPut(b *testing.B) {
+	data := generateDeduplicatedBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateDedupGetPut(keys)
+		i++
+	}
+}
+
+func BenchmarkDedupGetPutUnsafe(b *testing.B) {
+	data := generateDeduplicatedBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateDedupGetPutUnsafe(keys)
+		i++
+	}
+}
+
+func BenchmarkDedupFromRaw(b *testing.B) {
+	data := generateDeduplicatedBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateDedupFromRaw(keys)
+		i++
+	}
+}
+
+func BenchmarkDedupFromRawReuse(b *testing.B) {
+	data := generateDeduplicatedBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateDedupFromRawReuse(keys)
+		i++
+	}
+}
+
+func BenchmarkDedupDistinctMapBuilder(b *testing.B) {
+	data := generateDeduplicatedBenchData()
+	i := 0
+	for b.Loop() {
+		keys := slices.Clone(data[i%len(data)])
+		_ = accumulateDedupDistinctMapBuilder(keys)
 		i++
 	}
 }
