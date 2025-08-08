@@ -27,3 +27,11 @@ require (
 )
 
 replace go.opentelemetry.io/collector/pdata => ../
+
+replace go.opentelemetry.io/collector/pdata/xpdata => ../xpdata
+
+replace go.opentelemetry.io/collector/pdata/testdata => ../testdata
+
+replace go.opentelemetry.io/collector/client => ../../client
+
+replace go.opentelemetry.io/collector/consumer => ../../consumer

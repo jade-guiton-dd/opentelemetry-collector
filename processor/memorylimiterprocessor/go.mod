@@ -120,3 +120,7 @@ replace go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper
 replace go.opentelemetry.io/collector/processor/processorhelper => ../processorhelper
 
 replace go.opentelemetry.io/collector/pipeline/xpipeline => ../../pipeline/xpipeline
+
+replace go.opentelemetry.io/collector/client => ../../client
+
+replace go.opentelemetry.io/collector/pdata/xpdata => ../../pdata/xpdata

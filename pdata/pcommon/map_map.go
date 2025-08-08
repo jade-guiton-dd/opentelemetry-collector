@@ -4,6 +4,8 @@
 package pcommon // import "go.opentelemetry.io/collector/pdata/pcommon"
 
 import (
+	"iter"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 )
@@ -43,16 +45,36 @@ func (m MapMap) EnsureCapacity(capacity int) {
 	*m.getOrig() = newOrig
 }
 
+func (m MapMap) Get(key string) (Value, bool) {
+	if val, existing := (*m.getOrig())[key]; existing {
+		return newValue(val, m.getState()), true
+	}
+	return newValue(nil, m.getState()), false
+}
+
 // PutEmpty inserts or updates an empty value to the map under given key
 // and return the updated/inserted value.
 func (m MapMap) PutEmpty(k string) Value {
 	m.getState().AssertMutable()
 	if val, existing := (*m.getOrig())[k]; existing {
-		av := newValue(val, m.getState())
-		av.getOrig().Value = nil
-		return newValue(av.getOrig(), m.getState())
+		val.Value = nil
+		return newValue(val, m.getState())
 	}
 	val := &otlpcommon.AnyValue{}
 	(*m.getOrig())[k] = val
 	return newValue(val, m.getState())
+}
+
+func (m MapMap) PutStr(k string, v string) {
+	m.PutEmpty(k).SetStr(v)
+}
+
+func (m MapMap) All() iter.Seq2[string, Value] {
+	return func(yield func(string, Value) bool) {
+		for k, v := range *m.getOrig() {
+			if !yield(k, Value(internal.NewValue(v, m.getState()))) {
+				return
+			}
+		}
+	}
 }

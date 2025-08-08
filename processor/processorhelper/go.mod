@@ -81,3 +81,7 @@ replace go.opentelemetry.io/collector/component/componentstatus => ../../compone
 replace go.opentelemetry.io/collector/internal/telemetry => ../../internal/telemetry
 
 replace go.opentelemetry.io/collector/featuregate => ../../featuregate
+
+replace go.opentelemetry.io/collector/pdata/xpdata => ../../pdata/xpdata
+
+replace go.opentelemetry.io/collector/client => ../../client

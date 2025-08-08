@@ -57,3 +57,13 @@ replace go.opentelemetry.io/collector/pdata => ../../pdata
 replace go.opentelemetry.io/collector/internal/telemetry => ../telemetry
 
 replace go.opentelemetry.io/collector/featuregate => ../../featuregate
+
+replace go.opentelemetry.io/collector/client => ../../client
+
+replace go.opentelemetry.io/collector/consumer => ../../consumer
+
+replace go.opentelemetry.io/collector/pdata/xpdata => ../../pdata/xpdata
+
+replace go.opentelemetry.io/collector/pdata/testdata => ../../pdata/testdata
+
+replace go.opentelemetry.io/collector/pdata/pprofile => ../../pdata/pprofile

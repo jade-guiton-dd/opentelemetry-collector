@@ -5,6 +5,7 @@ package pcommon // import "go.opentelemetry.io/collector/pdata/pcommon"
 
 import (
 	"cmp"
+	"iter"
 	"slices"
 
 	"go.opentelemetry.io/collector/pdata/internal"
@@ -86,12 +87,16 @@ func (m SortedMap) PutEmpty(k string) Value {
 }
 
 func (m SortedMap) PutStr(k string, v string) {
-	m.getState().AssertMutable()
-	i, existing := m.find(k)
-	if existing {
-		av := newValue(&(*m.getOrig())[i].Value, m.getState())
-		av.SetStr(v)
-	} else {
-		*m.getOrig() = slices.Insert(*m.getOrig(), i, newKeyValueString(k, v))
+	m.PutEmpty(k).SetStr(v)
+}
+
+func (m SortedMap) All() iter.Seq2[string, Value] {
+	return func(yield func(string, Value) bool) {
+		for i := range *m.getOrig() {
+			kv := &(*m.getOrig())[i]
+			if !yield(kv.Key, Value(internal.NewValue(&kv.Value, m.getState()))) {
+				return
+			}
+		}
 	}
 }

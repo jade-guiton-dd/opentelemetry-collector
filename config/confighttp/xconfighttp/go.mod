@@ -111,3 +111,9 @@ replace go.opentelemetry.io/collector/config/configmiddleware => ../../configmid
 replace go.opentelemetry.io/collector/extension/extensionmiddleware/extensionmiddlewaretest => ../../../extension/extensionmiddleware/extensionmiddlewaretest
 
 replace go.opentelemetry.io/collector/confmap => ../../../confmap
+
+replace go.opentelemetry.io/collector/pdata/xpdata => ../../../pdata/xpdata
+
+replace go.opentelemetry.io/collector/pdata/testdata => ../../../pdata/testdata
+
+replace go.opentelemetry.io/collector/pdata/pprofile => ../../../pdata/pprofile
