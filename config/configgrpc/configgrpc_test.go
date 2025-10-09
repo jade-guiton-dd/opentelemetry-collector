@@ -30,6 +30,8 @@ import (
 	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configtls"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/extensionauth"
 	"go.opentelemetry.io/collector/extension/extensionauth/extensionauthtest"
@@ -1217,4 +1219,35 @@ type mockHost struct {
 
 func (nh *mockHost) GetExtensions() map[component.ID]component.Component {
 	return nh.ext
+}
+
+const clientConfigHeadersList = `
+headers:
+- name: "foo"
+  value: "bar"
+`
+const clientConfigHeadersMap = `
+headers:
+  "foo": "bar"
+`
+
+func TestHeadersList(t *testing.T) {
+	retrieved1, err := confmap.NewRetrievedFromYAML([]byte(clientConfigHeadersList))
+	require.NoError(t, err)
+	conf1, err := retrieved1.AsConf()
+	require.NoError(t, err)
+	cc1 := NewDefaultClientConfig()
+	require.NoError(t, conf1.Unmarshal(&cc1))
+	assert.NoError(t, xconfmap.Validate(&cc1))
+
+	retrieved2, err := confmap.NewRetrievedFromYAML([]byte(clientConfigHeadersMap))
+	require.NoError(t, err)
+	conf2, err := retrieved2.AsConf()
+	require.NoError(t, err)
+	cc2 := NewDefaultClientConfig()
+	err = conf2.Unmarshal(&cc2)
+	require.NoError(t, err)
+	assert.NoError(t, xconfmap.Validate(&cc2))
+
+	assert.Equal(t, cc1, cc2)
 }

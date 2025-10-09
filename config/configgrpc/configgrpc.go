@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configtls"
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension/extensionauth"
 )
 
@@ -221,6 +222,37 @@ func NewDefaultServerConfig() ServerConfig {
 		Keepalive: configoptional.Some(NewDefaultKeepaliveServerConfig()),
 		NetAddr:   netAddr,
 	}
+}
+
+var _ confmap.Unmarshaler = (*ClientConfig)(nil)
+
+type header struct {
+	Name  string              `mapstructure:"name"`
+	Value configopaque.String `mapstructure:"value"`
+}
+
+type headersMap struct {
+	Headers []header `mapstructure:"headers"`
+}
+
+func (cc *ClientConfig) Unmarshal(conf *confmap.Conf) error {
+	headers := conf.Get("headers")
+	if headersList, ok := headers.([]any); ok {
+		var m headersMap
+		err := confmap.NewFromStringMap(map[string]any{
+			"headers": headersList,
+		}).Unmarshal(&m)
+		if err != nil {
+			return err
+		}
+		cc.Headers = make(map[string]configopaque.String, len(m.Headers))
+		for _, header := range m.Headers {
+			cc.Headers[header.Name] = header.Value
+		}
+		conf.Delete("headers")
+	}
+
+	return conf.Unmarshal(cc)
 }
 
 func (cc *ClientConfig) Validate() error {
