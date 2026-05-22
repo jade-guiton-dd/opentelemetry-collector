@@ -45,7 +45,9 @@ type MemoryLimiter struct {
 
 	minGCIntervalWhenSoftLimited time.Duration
 	minGCIntervalWhenHardLimited time.Duration
+	currentGCInterval            time.Duration
 	lastGCDone                   time.Time
+	lastStats                    *runtime.MemStats
 
 	// The functions to read the mem values and run GC are set as a reference to help with
 	// testing different values.
@@ -166,6 +168,18 @@ func (ml *MemoryLimiter) doGCandReadMemStats() *runtime.MemStats {
 	return ms
 }
 
+func (ml *MemoryLimiter) checkLimitAndBackoff(ms *runtime.MemStats, didGc bool) (aboveSoftLimit bool) {
+	aboveSoftLimit = ml.usageChecker.aboveSoftLimit(ms)
+	gcWasEffective := !aboveSoftLimit || ms.Alloc <= ml.lastStats.Alloc*95/100
+	ml.lastStats = ms
+	if gcWasEffective {
+		ml.currentGCInterval = 0
+	} else if didGc {
+		ml.currentGCInterval = min(ml.currentGCInterval*2, max(ml.currentGCInterval, 30*time.Second))
+	}
+	return
+}
+
 // CheckMemLimits inspects current memory usage against threshold and toggles mustRefuse when threshold is exceeded
 func (ml *MemoryLimiter) CheckMemLimits() {
 	ms := ml.readMemStats()
@@ -173,7 +187,7 @@ func (ml *MemoryLimiter) CheckMemLimits() {
 	ml.logger.Debug("Currently used memory.", memstatToZapField(ms))
 
 	// Check if we are below the soft limit.
-	aboveSoftLimit := ml.usageChecker.aboveSoftLimit(ms)
+	aboveSoftLimit := ml.checkLimitAndBackoff(ms, false)
 	if !aboveSoftLimit {
 		if ml.mustRefuse.Load() {
 			// Was previously refusing but enough memory is available now, no need to limit.
@@ -184,22 +198,24 @@ func (ml *MemoryLimiter) CheckMemLimits() {
 	}
 
 	if ml.usageChecker.aboveHardLimit(ms) {
+		ml.currentGCInterval = min(ml.currentGCInterval, ml.minGCIntervalWhenHardLimited)
 		// We are above hard limit, do a GC if it wasn't done recently and see if
 		// it brings memory usage below the soft limit.
-		if time.Since(ml.lastGCDone) > ml.minGCIntervalWhenHardLimited {
+		if time.Since(ml.lastGCDone) > ml.currentGCInterval {
 			ml.logger.Warn("Memory usage is above hard limit. Forcing a GC.", memstatToZapField(ms))
 			ms = ml.doGCandReadMemStats()
 			// Check the limit again to see if GC helped.
-			aboveSoftLimit = ml.usageChecker.aboveSoftLimit(ms)
+			aboveSoftLimit = ml.checkLimitAndBackoff(ms, true)
 		}
 	} else {
+		ml.currentGCInterval = min(ml.currentGCInterval, ml.minGCIntervalWhenSoftLimited)
 		// We are above soft limit, do a GC if it wasn't done recently and see if
 		// it brings memory usage below the soft limit.
-		if time.Since(ml.lastGCDone) > ml.minGCIntervalWhenSoftLimited {
+		if time.Since(ml.lastGCDone) > ml.currentGCInterval {
 			ml.logger.Info("Memory usage is above soft limit. Forcing a GC.", memstatToZapField(ms))
 			ms = ml.doGCandReadMemStats()
 			// Check the limit again to see if GC helped.
-			aboveSoftLimit = ml.usageChecker.aboveSoftLimit(ms)
+			aboveSoftLimit = ml.checkLimitAndBackoff(ms, true)
 		}
 	}
 
