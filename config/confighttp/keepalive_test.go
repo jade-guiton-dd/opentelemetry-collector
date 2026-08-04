@@ -22,7 +22,7 @@ import (
 
 // ---- ClientConfig ----
 
-// Unmarshal folds the 'keepalive' section into the deprecated fields and always
+// Unmarshal folds the deprecated fields into 'keepalive' section into the deprecated fields and always
 // resets the Optional to None; the section's effect shows in the flat fields.
 func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 	tests := []struct {
@@ -36,9 +36,21 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 			name: "no keepalive config — defaults",
 			conf: map[string]any{},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 90*time.Second, cfg.IdleConnTimeout)
-				assert.Equal(t, 100, cfg.MaxIdleConns)
-				assert.False(t, cfg.DisableKeepAlives)
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
+				assert.Equal(t, 90*time.Second, keepalive.IdleConnTimeout)
+				assert.Equal(t, 100, keepalive.MaxIdleConns)
+				assert.Empty(t, cfg.deprecationWarnings)
+			},
+		},
+		{
+			name: "null keepalive treated as set with defaults",
+			conf: map[string]any{"keepalive": nil},
+			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
+				assert.Equal(t, 90*time.Second, keepalive.IdleConnTimeout)
+				assert.Equal(t, 100, keepalive.MaxIdleConns)
 				assert.Empty(t, cfg.deprecationWarnings)
 			},
 		},
@@ -49,10 +61,11 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 				"max_idle_conns_per_host": 5,
 			}},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 60*time.Second, cfg.IdleConnTimeout)
-				assert.Equal(t, 100, cfg.MaxIdleConns)
-				assert.Equal(t, 5, cfg.MaxIdleConnsPerHost)
-				assert.False(t, cfg.DisableKeepAlives)
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
+				assert.Equal(t, 60*time.Second, keepalive.IdleConnTimeout)
+				assert.Equal(t, 100, keepalive.MaxIdleConns)
+				assert.Equal(t, 5, keepalive.MaxIdleConnsPerHost)
 				assert.Empty(t, cfg.deprecationWarnings)
 			},
 		},
@@ -60,25 +73,19 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 			name: "deprecated fields only",
 			conf: map[string]any{"idle_conn_timeout": "60s", "max_idle_conns": 50},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 60*time.Second, cfg.IdleConnTimeout)
-				assert.Equal(t, 50, cfg.MaxIdleConns)
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
+				assert.Equal(t, 60*time.Second, keepalive.IdleConnTimeout)
+				assert.Equal(t, 50, keepalive.MaxIdleConns)
 				assert.Len(t, cfg.deprecationWarnings, 2)
-			},
-		},
-		{
-			name: "null keepalive treated as unset",
-			conf: map[string]any{"keepalive": nil},
-			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 90*time.Second, cfg.IdleConnTimeout)
-				assert.False(t, cfg.DisableKeepAlives)
 			},
 		},
 		{
 			name: "keepalive disabled via enabled false",
 			conf: map[string]any{"keepalive": map[string]any{"enabled": false}},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.True(t, cfg.DisableKeepAlives)
-				assert.Empty(t, cfg.deprecationWarnings)
+				keepalive := cfg.Keepalive.Get()
+				assert.Nil(t, keepalive)
 			},
 		},
 		{
@@ -88,35 +95,20 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 			},
 			conf: map[string]any{"keepalive": map[string]any{"idle_conn_timeout": "60s"}},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.False(t, cfg.DisableKeepAlives)
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
 			},
 		},
 		{
 			name: "disable_keep_alives only",
 			conf: map[string]any{"disable_keep_alives": true},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.True(t, cfg.DisableKeepAlives)
-				assert.Len(t, cfg.deprecationWarnings, 1)
+				keepalive := cfg.Keepalive.Get()
+				assert.Nil(t, keepalive)
 			},
 		},
 		{
-			name: "null keepalive + deprecated field — no conflict",
-			conf: map[string]any{"keepalive": nil, "idle_conn_timeout": "60s"},
-			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 60*time.Second, cfg.IdleConnTimeout)
-			},
-		},
-		{
-			name: "keepalive section + no-op deprecated value — no conflict",
-			conf: map[string]any{"keepalive": map[string]any{}, "idle_conn_timeout": "0s"},
-			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				// The explicit legacy zero is honored, as it would be on its own.
-				assert.Equal(t, time.Duration(0), cfg.IdleConnTimeout)
-				assert.Equal(t, 100, cfg.MaxIdleConns)
-			},
-		},
-		{
-			name: "programmatic Keepalive folded into deprecated fields",
+			name: "programmatic Keepalive kept as is",
 			prepare: func(cfg *ClientConfig) {
 				cfg.Keepalive = configoptional.Some(KeepaliveClientConfig{
 					IdleConnTimeout: 5 * time.Minute,
@@ -125,8 +117,10 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 			},
 			conf: map[string]any{},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 5*time.Minute, cfg.IdleConnTimeout)
-				assert.Equal(t, 10, cfg.MaxIdleConns)
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
+				assert.Equal(t, 5*time.Minute, keepalive.IdleConnTimeout)
+				assert.Equal(t, 10, keepalive.MaxIdleConns)
 				assert.Empty(t, cfg.deprecationWarnings)
 			},
 		},
@@ -140,9 +134,21 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 			},
 			conf: map[string]any{"keepalive": map[string]any{"idle_conn_timeout": "1m"}},
 			verifyConfig: func(t *testing.T, cfg *ClientConfig) {
-				assert.Equal(t, 1*time.Minute, cfg.IdleConnTimeout)
-				assert.Equal(t, 10, cfg.MaxIdleConns)
+				keepalive := cfg.Keepalive.Get()
+				require.NotNil(t, keepalive)
+				assert.Equal(t, 1*time.Minute, keepalive.IdleConnTimeout)
+				assert.Equal(t, 10, keepalive.MaxIdleConns)
 			},
+		},
+		{
+			name:        "conflict: null keepalive + deprecated field",
+			conf:        map[string]any{"keepalive": nil, "idle_conn_timeout": "60s"},
+			expectError: true,
+		},
+		{
+			name:        "conflict: keepalive section + no-op deprecated value",
+			conf:        map[string]any{"keepalive": map[string]any{}, "idle_conn_timeout": "0s"},
+			expectError: true,
 		},
 		{
 			name:        "conflict: keepalive section + idle_conn_timeout",
@@ -169,7 +175,6 @@ func TestClientConfigUnmarshalKeepalive(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, configoptional.None[KeepaliveClientConfig](), cfg.Keepalive)
 			if tt.verifyConfig != nil {
 				tt.verifyConfig(t, &cfg)
 			}
@@ -454,9 +459,10 @@ func TestClientConfigSquashNamedField(t *testing.T) {
 
 	assert.Equal(t, "http://localhost:4318", cfg.ClientConfig.Endpoint)
 	assert.Equal(t, "sibling", cfg.Extra)
-	assert.Equal(t, configoptional.None[KeepaliveClientConfig](), cfg.ClientConfig.Keepalive)
-	assert.Equal(t, 60*time.Second, cfg.ClientConfig.IdleConnTimeout)
-	assert.Equal(t, 100, cfg.ClientConfig.MaxIdleConns)
+	keepalive := cfg.ClientConfig.Keepalive.Get()
+	require.NotNil(t, keepalive)
+	assert.Equal(t, 60*time.Second, keepalive.IdleConnTimeout)
+	assert.Equal(t, 100, keepalive.MaxIdleConns)
 }
 
 // namedSquashServerConfig mirrors how components like zpagesextension embed

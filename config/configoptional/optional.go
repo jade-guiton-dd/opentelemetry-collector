@@ -249,7 +249,9 @@ var (
 func (o Optional[T]) Marshal(conf *confmap.Conf) error {
 	if o.flavor == noneFlavor || o.flavor == defaultFlavor {
 		// Optional is None or Default, do not marshal anything.
-		return conf.Marshal(map[string]any(nil))
+		return conf.Marshal(map[string]any{
+			"enabled": false,
+		})
 	}
 
 	if err := conf.Marshal(o.value); err != nil {
