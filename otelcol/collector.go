@@ -83,6 +83,9 @@ type CollectorSettings struct {
 
 	// SkipSettingGRPCLogger avoids setting the grpc logger
 	SkipSettingGRPCLogger bool
+
+	// DefaultStabilitySettings specifies the stability restrictions on available components and feature gates.
+	DefaultStabilitySettings DefaultStabilitySettings
 }
 
 // (Internal note) Collector Lifecycle:

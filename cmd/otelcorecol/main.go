@@ -13,6 +13,7 @@ import (
 	httpprovider "go.opentelemetry.io/collector/confmap/provider/httpprovider"
 	httpsprovider "go.opentelemetry.io/collector/confmap/provider/httpsprovider"
 	yamlprovider "go.opentelemetry.io/collector/confmap/provider/yamlprovider"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 )
 
@@ -45,6 +46,10 @@ func main() {
 			yamlprovider.NewFactory().Create(confmap.ProviderSettings{}).Scheme():  "go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.71.0",
 		},
 		ConverterModules: []string{},
+		DefaultStabilitySettings: otelcol.DefaultStabilitySettings{
+			Components:   component.StabilityLevelDevelopment,
+			FeatureGates: featuregate.StageBeta,
+		},
 	}
 
 	if err := run(set); err != nil {

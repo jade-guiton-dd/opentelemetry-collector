@@ -14,6 +14,7 @@ import (
 	{{- range .ConfmapProviders}}
 	{{.Name}} "{{.Import}}"
 	{{- end}}
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 )
 
@@ -55,6 +56,10 @@ func main() {
 			{{- range .ConfmapConverters}}
 			"{{.GoMod}}",
 			{{- end}}
+		},
+		DefaultStabilitySettings: otelcol.DefaultStabilitySettings{
+			Components: component.StabilityLevel{{ .Distribution.DefaultStability.Components.Capitalized }},
+			FeatureGates: featuregate.Stage{{ .Distribution.DefaultStability.FeatureGates.Capitalized }},
 		},
 	}
 

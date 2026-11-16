@@ -71,17 +71,30 @@ type ConfResolver struct {
 
 // Distribution holds the parameters for the final binary
 type Distribution struct {
-	Module                  string   `mapstructure:"module,omitempty"`
-	Name                    string   `mapstructure:"name"`
-	Go                      string   `mapstructure:"go,omitempty"`
-	Description             string   `mapstructure:"description"`
-	OutputPath              string   `mapstructure:"output_path"`
-	Version                 string   `mapstructure:"version,omitempty"`
-	BuildTags               string   `mapstructure:"build_tags,omitempty"`
-	DebugCompilation        bool     `mapstructure:"debug_compilation,omitempty"`
-	CGoEnabled              bool     `mapstructure:"cgo_enabled,omitempty"`
-	UseAbsoluteReplacePaths bool     `mapstructure:"use_absolute_replace_paths,omitempty"`
-	Resource                Resource `mapstructure:"resource,omitempty"`
+	Module                  string           `mapstructure:"module,omitempty"`
+	Name                    string           `mapstructure:"name"`
+	Go                      string           `mapstructure:"go,omitempty"`
+	Description             string           `mapstructure:"description"`
+	OutputPath              string           `mapstructure:"output_path"`
+	Version                 string           `mapstructure:"version,omitempty"`
+	BuildTags               string           `mapstructure:"build_tags,omitempty"`
+	DebugCompilation        bool             `mapstructure:"debug_compilation,omitempty"`
+	CGoEnabled              bool             `mapstructure:"cgo_enabled,omitempty"`
+	UseAbsoluteReplacePaths bool             `mapstructure:"use_absolute_replace_paths,omitempty"`
+	Resource                Resource         `mapstructure:"resource,omitempty"`
+	DefaultStability        DefaultStability `mapstructure:"default_stability,omitempty"`
+}
+
+// DefaultStability holds configuration of the default enforced stability for the distribution.
+type DefaultStability struct {
+	Components   StabilityLevel `mapstructure:"components,omitempty"`
+	FeatureGates StabilityLevel `mapstructure:"feature_gates,omitempty"`
+}
+
+type StabilityLevel string
+
+func (sl StabilityLevel) Capitalized() string {
+	return strings.ToUpper(string(sl[:1])) + string(sl[1:])
 }
 
 // Resource holds resource configuration for the distribution. Its shape mirrors the
@@ -217,6 +230,10 @@ func NewDefaultConfig() (*Config, error) {
 		Distribution: Distribution{
 			OutputPath: outputDir,
 			Module:     "go.opentelemetry.io/collector/cmd/builder",
+			DefaultStability: DefaultStability{
+				Components:   "development",
+				FeatureGates: "beta",
+			},
 		},
 		// basic retry if error from go mod command (in case of transient network error).
 		// retry 3 times with 5 second spacing interval
@@ -256,6 +273,7 @@ func (c *Config) Validate() error {
 		validateModules("converter", c.ConfmapConverters),
 		validateTelemetry(c),
 		validateResourceDetectors(c.Distribution.Resource.Detection.Detectors),
+		validateDefaultStability(c.Distribution.DefaultStability),
 	)
 }
 
@@ -276,6 +294,28 @@ func validateResourceDetectors(detectors []ResourceDetector) error {
 		}
 	}
 	return errs
+}
+
+var validComponentStabilityLevels = []string{
+	"development",
+	"alpha",
+	"beta",
+	"stable",
+}
+
+var validFeatureGateStabilityLevels = []string{
+	"beta",
+	"stable",
+}
+
+func validateDefaultStability(defaultStability DefaultStability) (err error) {
+	if !slices.Contains(validComponentStabilityLevels, string(defaultStability.Components)) {
+		err = errors.Join(fmt.Errorf("invalid stability level for components: %s", defaultStability.Components))
+	}
+	if !slices.Contains(validFeatureGateStabilityLevels, string(defaultStability.FeatureGates)) {
+		err = errors.Join(fmt.Errorf("invalid stability level for feature gates: %s", defaultStability.FeatureGates))
+	}
+	return err
 }
 
 // SetGoPath sets go path

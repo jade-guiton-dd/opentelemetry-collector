@@ -21,6 +21,20 @@ import (
 	"go.opentelemetry.io/collector/cmd/builder/internal/config"
 )
 
+// testDefaultStability mirrors the defaults set in NewDefaultConfig, so that
+// hand-constructed test configs pass validateDefaultStability.
+var testDefaultStability = DefaultStability{
+	Components:   "development",
+	FeatureGates: "beta",
+}
+
+// testDefaultDistribution mirrors the Distribution defaults set in
+// NewDefaultConfig, for hand-constructed test configs that set no other
+// Distribution fields.
+var testDefaultDistribution = Distribution{
+	DefaultStability: testDefaultStability,
+}
+
 func TestAliases(t *testing.T) {
 	// prepare
 	cfg := Config{
@@ -326,7 +340,7 @@ func TestNewBuiltinConfig(t *testing.T) {
 
 	require.NoError(t, k.Load(config.DefaultProvider(), yaml.Parser()))
 
-	cfg := Config{Logger: zaptest.NewLogger(t)}
+	cfg := Config{Logger: zaptest.NewLogger(t), Distribution: testDefaultDistribution}
 
 	require.NoError(t, k.UnmarshalWithConf("", &cfg, koanf.UnmarshalConf{Tag: "mapstructure"}))
 	require.NoError(t, cfg.Validate())
@@ -345,7 +359,8 @@ func TestNewBuiltinConfig(t *testing.T) {
 func TestSkipGoValidation(t *testing.T) {
 	cfg := Config{
 		Distribution: Distribution{
-			Go: "invalid/go/binary/path",
+			Go:               "invalid/go/binary/path",
+			DefaultStability: testDefaultStability,
 		},
 		SkipCompilation: true,
 		SkipGetModules:  true,
@@ -356,6 +371,7 @@ func TestSkipGoValidation(t *testing.T) {
 
 func TestSkipGoInitialization(t *testing.T) {
 	cfg := Config{
+		Distribution:    testDefaultDistribution,
 		SkipCompilation: true,
 		SkipGetModules:  true,
 	}
@@ -367,7 +383,8 @@ func TestSkipGoInitialization(t *testing.T) {
 func TestBuildTagConfig(t *testing.T) {
 	cfg := Config{
 		Distribution: Distribution{
-			BuildTags: "customTag",
+			BuildTags:        "customTag",
+			DefaultStability: testDefaultStability,
 		},
 		SkipCompilation: true,
 		SkipGetModules:  true,
@@ -473,7 +490,8 @@ func TestValidateResourceDetectors(t *testing.T) {
 			cfg := Config{
 				Logger: zap.NewNop(),
 				Distribution: Distribution{
-					Resource: Resource{Detection: ResourceDetection{Detectors: tt.detectors}},
+					Resource:         Resource{Detection: ResourceDetection{Detectors: tt.detectors}},
+					DefaultStability: testDefaultStability,
 				},
 			}
 			if tt.wantErr == nil {
@@ -500,7 +518,7 @@ dist:
 	k := koanf.New(".")
 	require.NoError(t, k.Load(file.Provider(cfgFile), yaml.Parser()))
 
-	cfg := Config{Logger: zap.NewNop()}
+	cfg := Config{Logger: zap.NewNop(), Distribution: testDefaultDistribution}
 	require.NoError(t, k.UnmarshalWithConf("", &cfg, koanf.UnmarshalConf{Tag: "mapstructure"}))
 
 	require.Len(t, cfg.Distribution.Resource.Detection.Detectors, 2)
@@ -512,6 +530,7 @@ func TestDebugOptionSetConfig(t *testing.T) {
 	cfg := Config{
 		Distribution: Distribution{
 			DebugCompilation: true,
+			DefaultStability: testDefaultStability,
 		},
 		SkipCompilation: true,
 		SkipGetModules:  true,
