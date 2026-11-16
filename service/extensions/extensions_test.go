@@ -91,7 +91,7 @@ func TestBuildExtensions(t *testing.T) {
 			_, err := New(context.Background(), Settings{
 				Telemetry:  componenttest.NewNopTelemetrySettings(),
 				BuildInfo:  component.NewDefaultBuildInfo(),
-				Extensions: builders.NewExtension(tt.extensionsConfigs, tt.factories),
+				Extensions: builders.NewExtension(tt.extensionsConfigs, tt.factories, component.StabilityLevelUndefined),
 			}, tt.config)
 			require.Error(t, err)
 			assert.EqualError(t, err, tt.wantErrMsg)
@@ -188,6 +188,7 @@ func (tc testOrderCase) testOrdering(t *testing.T) {
 			map[component.Type]extension.Factory{
 				recordingExtensionFactory.Type(): recordingExtensionFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 	}, Config(extIDs))
 	if tc.err != "" {
@@ -341,7 +342,7 @@ func TestStatusReportedOnStartupShutdown(t *testing.T) {
 				Settings{
 					Telemetry:  componenttest.NewNopTelemetrySettings(),
 					BuildInfo:  component.NewDefaultBuildInfo(),
-					Extensions: builders.NewExtension(extensionsConfigs, factories),
+					Extensions: builders.NewExtension(extensionsConfigs, factories, component.StabilityLevelUndefined),
 				},
 				[]component.ID{compID},
 				WithReporter(rep),
@@ -384,7 +385,7 @@ func TestExtensionReportsOwnStatus(t *testing.T) {
 		Settings{
 			Telemetry:  componenttest.NewNopTelemetrySettings(),
 			BuildInfo:  component.NewDefaultBuildInfo(),
-			Extensions: builders.NewExtension(extensionsConfigs, factories),
+			Extensions: builders.NewExtension(extensionsConfigs, factories, component.StabilityLevelUndefined),
 		},
 		[]component.ID{compID},
 		WithReporter(rep),
@@ -432,6 +433,7 @@ func TestExtensionHostForwardsHostCapabilities(t *testing.T) {
 			Extensions: builders.NewExtension(
 				map[component.ID]component.Config{compID: recordingExtensionConfig{}},
 				map[component.Type]extension.Factory{factory.Type(): factory},
+				component.StabilityLevelUndefined,
 			),
 		},
 		[]component.ID{compID},
@@ -674,7 +676,7 @@ func TestNotifyConfigSnapshot(t *testing.T) {
 			extensions, err := New(context.Background(), Settings{
 				Telemetry:  componenttest.NewNopTelemetrySettings(),
 				BuildInfo:  component.NewDefaultBuildInfo(),
-				Extensions: builders.NewExtension(tt.extensionsConfigs, tt.factories),
+				Extensions: builders.NewExtension(tt.extensionsConfigs, tt.factories, component.StabilityLevelUndefined),
 			}, tt.serviceExtensions)
 			require.NoError(t, err)
 			errs := extensions.NotifyConfigSnapshot(
@@ -699,6 +701,7 @@ func TestNotifyConfigSnapshotWithNilSnapshot(t *testing.T) {
 		Extensions: builders.NewExtension(
 			map[component.ID]component.Config{component.MustNewID("snapshotnotifiable"): extensionFactory.CreateDefaultConfig()},
 			map[component.Type]extension.Factory{component.MustNewType("snapshotnotifiable"): extensionFactory},
+			component.StabilityLevelUndefined,
 		),
 	}, []component.ID{component.MustNewID("snapshotnotifiable")})
 	require.NoError(t, err)
@@ -720,6 +723,7 @@ func TestNotifyConfigSnapshotWithNilEffectiveConfig(t *testing.T) {
 		Extensions: builders.NewExtension(
 			map[component.ID]component.Config{component.MustNewID("notifiable"): extensionFactory.CreateDefaultConfig()},
 			map[component.Type]extension.Factory{component.MustNewType("notifiable"): extensionFactory},
+			component.StabilityLevelUndefined,
 		),
 	}, []component.ID{component.MustNewID("notifiable")})
 	require.NoError(t, err)
@@ -745,6 +749,7 @@ func TestNotifyConfigSnapshotPrefersSnapshotWatcher(t *testing.T) {
 		Extensions: builders.NewExtension(
 			map[component.ID]component.Config{component.MustNewID("bothwatchers"): extensionFactory.CreateDefaultConfig()},
 			map[component.Type]extension.Factory{component.MustNewType("bothwatchers"): extensionFactory},
+			component.StabilityLevelUndefined,
 		),
 	}, []component.ID{component.MustNewID("bothwatchers")})
 	require.NoError(t, err)

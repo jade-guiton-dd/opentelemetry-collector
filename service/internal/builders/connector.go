@@ -23,13 +23,19 @@ func errDataTypes(id component.ID, from, to pipeline.Signal) error {
 
 // ConnectorBuilder is a helper struct that given a set of Configs and Factories helps with creating connectors.
 type ConnectorBuilder struct {
-	cfgs      map[component.ID]component.Config
-	factories map[component.Type]connector.Factory
+	cfgs             map[component.ID]component.Config
+	factories        map[component.Type]connector.Factory
+	minimumStability component.StabilityLevel
 }
 
 // NewConnector creates a new ConnectorBuilder to help with creating components form a set of configs and factories.
-func NewConnector(cfgs map[component.ID]component.Config, factories map[component.Type]connector.Factory) *ConnectorBuilder {
-	return &ConnectorBuilder{cfgs: cfgs, factories: factories}
+// The minimumStability is the lowest stability level allowed for the created components.
+func NewConnector(
+	cfgs map[component.ID]component.Config,
+	factories map[component.Type]connector.Factory,
+	minimumStability component.StabilityLevel,
+) *ConnectorBuilder {
+	return &ConnectorBuilder{cfgs: cfgs, factories: factories, minimumStability: minimumStability}
 }
 
 // CreateTracesToTraces creates a Traces connector based on the settings and config.
@@ -45,6 +51,10 @@ func (b *ConnectorBuilder) CreateTracesToTraces(ctx context.Context, set connect
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.TracesToTracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -67,6 +77,10 @@ func (b *ConnectorBuilder) CreateTracesToMetrics(ctx context.Context, set connec
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
 	}
 
+	if err := checkMinimumStability(f.TracesToMetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.TracesToMetricsStability())
 	return f.CreateTracesToMetrics(ctx, set, cfg, next)
@@ -85,6 +99,10 @@ func (b *ConnectorBuilder) CreateTracesToLogs(ctx context.Context, set connector
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.TracesToLogsStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -112,6 +130,10 @@ func (b *ConnectorBuilder) CreateTracesToProfiles(ctx context.Context, set conne
 		return nil, errDataTypes(set.ID, pipeline.SignalTraces, xpipeline.SignalProfiles)
 	}
 
+	if err := checkMinimumStability(f.TracesToProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.TracesToProfilesStability())
 	return f.CreateTracesToProfiles(ctx, set, cfg, next)
@@ -130,6 +152,10 @@ func (b *ConnectorBuilder) CreateMetricsToTraces(ctx context.Context, set connec
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.MetricsToTracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -152,6 +178,10 @@ func (b *ConnectorBuilder) CreateMetricsToMetrics(ctx context.Context, set conne
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
 	}
 
+	if err := checkMinimumStability(f.MetricsToMetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.MetricsToMetricsStability())
 	return f.CreateMetricsToMetrics(ctx, set, cfg, next)
@@ -170,6 +200,10 @@ func (b *ConnectorBuilder) CreateMetricsToLogs(ctx context.Context, set connecto
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.MetricsToLogsStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -197,6 +231,10 @@ func (b *ConnectorBuilder) CreateMetricsToProfiles(ctx context.Context, set conn
 		return nil, errDataTypes(set.ID, pipeline.SignalMetrics, xpipeline.SignalProfiles)
 	}
 
+	if err := checkMinimumStability(f.MetricsToProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.MetricsToProfilesStability())
 	return f.CreateMetricsToProfiles(ctx, set, cfg, next)
@@ -215,6 +253,10 @@ func (b *ConnectorBuilder) CreateLogsToTraces(ctx context.Context, set connector
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.LogsToTracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -237,6 +279,10 @@ func (b *ConnectorBuilder) CreateLogsToMetrics(ctx context.Context, set connecto
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
 	}
 
+	if err := checkMinimumStability(f.LogsToMetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.LogsToMetricsStability())
 	return f.CreateLogsToMetrics(ctx, set, cfg, next)
@@ -255,6 +301,10 @@ func (b *ConnectorBuilder) CreateLogsToLogs(ctx context.Context, set connector.S
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("connector factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.LogsToLogsStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -282,6 +332,10 @@ func (b *ConnectorBuilder) CreateLogsToProfiles(ctx context.Context, set connect
 		return nil, errDataTypes(set.ID, pipeline.SignalLogs, xpipeline.SignalProfiles)
 	}
 
+	if err := checkMinimumStability(f.LogsToProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.LogsToProfilesStability())
 	return f.CreateLogsToProfiles(ctx, set, cfg, next)
@@ -305,6 +359,10 @@ func (b *ConnectorBuilder) CreateProfilesToTraces(ctx context.Context, set conne
 	f, ok := connFact.(xconnector.Factory)
 	if !ok {
 		return nil, errDataTypes(set.ID, xpipeline.SignalProfiles, pipeline.SignalTraces)
+	}
+
+	if err := checkMinimumStability(f.ProfilesToTracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -332,6 +390,10 @@ func (b *ConnectorBuilder) CreateProfilesToMetrics(ctx context.Context, set conn
 		return nil, errDataTypes(set.ID, xpipeline.SignalProfiles, pipeline.SignalMetrics)
 	}
 
+	if err := checkMinimumStability(f.ProfilesToMetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.ProfilesToMetricsStability())
 	return f.CreateProfilesToMetrics(ctx, set, cfg, next)
@@ -357,6 +419,10 @@ func (b *ConnectorBuilder) CreateProfilesToLogs(ctx context.Context, set connect
 		return nil, errDataTypes(set.ID, xpipeline.SignalProfiles, pipeline.SignalLogs)
 	}
 
+	if err := checkMinimumStability(f.ProfilesToLogsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.ProfilesToLogsStability())
 	return f.CreateProfilesToLogs(ctx, set, cfg, next)
@@ -380,6 +446,10 @@ func (b *ConnectorBuilder) CreateProfilesToProfiles(ctx context.Context, set con
 	f, ok := connFact.(xconnector.Factory)
 	if !ok {
 		return nil, errDataTypes(set.ID, xpipeline.SignalProfiles, xpipeline.SignalProfiles)
+	}
+
+	if err := checkMinimumStability(f.ProfilesToProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())

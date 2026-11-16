@@ -94,7 +94,7 @@ func TestProcessorBuilder(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfgs := map[component.ID]component.Config{tt.id: defaultCfg}
-			b := builders.NewProcessor(cfgs, factories)
+			b := builders.NewProcessor(cfgs, factories, component.StabilityLevelUndefined)
 
 			te, err := b.CreateTraces(context.Background(), createProcessorSettings(tt.id), tt.nextTraces)
 			if tt.err != "" {
@@ -150,7 +150,7 @@ func TestProcessorBuilderMissingConfig(t *testing.T) {
 
 	require.NoError(t, err)
 
-	bErr := builders.NewProcessor(map[component.ID]component.Config{}, factories)
+	bErr := builders.NewProcessor(map[component.ID]component.Config{}, factories, component.StabilityLevelUndefined)
 	missingID := component.MustNewIDWithName("all", "missing")
 
 	te, err := bErr.CreateTraces(context.Background(), createProcessorSettings(missingID), consumertest.NewNop())
@@ -175,7 +175,7 @@ func TestProcessorBuilderFactory(t *testing.T) {
 	require.NoError(t, err)
 
 	cfgs := map[component.ID]component.Config{component.MustNewID("foo"): struct{}{}}
-	b := builders.NewProcessor(cfgs, factories)
+	b := builders.NewProcessor(cfgs, factories, component.StabilityLevelUndefined)
 
 	assert.NotNil(t, b.Factory(component.MustNewID("foo").Type()))
 	assert.Nil(t, b.Factory(component.MustNewID("bar").Type()))
@@ -183,7 +183,7 @@ func TestProcessorBuilderFactory(t *testing.T) {
 
 func TestNewNopProcessorBuilder(t *testing.T) {
 	configs, factories := builders.NewNopProcessorConfigsAndFactories()
-	builder := builders.NewProcessor(configs, factories)
+	builder := builders.NewProcessor(configs, factories, component.StabilityLevelUndefined)
 	require.NotNil(t, builder)
 
 	factory := processortest.NewNopFactory()

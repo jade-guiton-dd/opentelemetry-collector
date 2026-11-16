@@ -772,6 +772,7 @@ func testConnectorPipelinesGraph(t *testing.T) {
 					map[component.Type]receiver.Factory{
 						testcomponents.ExampleReceiverFactory.Type(): testcomponents.ExampleReceiverFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ProcessorBuilder: builders.NewProcessor(
 					map[component.ID]component.Config{
@@ -781,6 +782,7 @@ func testConnectorPipelinesGraph(t *testing.T) {
 					map[component.Type]processor.Factory{
 						testcomponents.ExampleProcessorFactory.Type(): testcomponents.ExampleProcessorFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ExporterBuilder: builders.NewExporter(
 					map[component.ID]component.Config{
@@ -790,6 +792,7 @@ func testConnectorPipelinesGraph(t *testing.T) {
 					map[component.Type]exporter.Factory{
 						testcomponents.ExampleExporterFactory.Type(): testcomponents.ExampleExporterFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ConnectorBuilder: builders.NewConnector(
 					map[component.ID]component.Config{
@@ -803,6 +806,7 @@ func testConnectorPipelinesGraph(t *testing.T) {
 						testcomponents.ExampleConnectorFactory.Type():     testcomponents.ExampleConnectorFactory,
 						testcomponents.MockForwardConnectorFactory.Type(): testcomponents.MockForwardConnectorFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				PipelineConfigs: tt.pipelineConfigs,
 			}
@@ -1109,6 +1113,7 @@ func testInstances(t *testing.T) {
 					map[component.Type]receiver.Factory{
 						testcomponents.ExampleReceiverFactory.Type(): testcomponents.ExampleReceiverFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ProcessorBuilder: builders.NewProcessor(
 					map[component.ID]component.Config{
@@ -1117,6 +1122,7 @@ func testInstances(t *testing.T) {
 					map[component.Type]processor.Factory{
 						testcomponents.ExampleProcessorFactory.Type(): testcomponents.ExampleProcessorFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ExporterBuilder: builders.NewExporter(
 					map[component.ID]component.Config{
@@ -1125,8 +1131,9 @@ func testInstances(t *testing.T) {
 					map[component.Type]exporter.Factory{
 						testcomponents.ExampleExporterFactory.Type(): testcomponents.ExampleExporterFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
-				ConnectorBuilder: builders.NewConnector(map[component.ID]component.Config{}, map[component.Type]connector.Factory{}),
+				ConnectorBuilder: builders.NewConnector(map[component.ID]component.Config{}, map[component.Type]connector.Factory{}, component.StabilityLevelUndefined),
 				PipelineConfigs:  tt.pipelineConfigs,
 			}
 
@@ -1220,6 +1227,7 @@ func testConnectorRouter(t *testing.T) {
 			map[component.Type]receiver.Factory{
 				testcomponents.ExampleReceiverFactory.Type(): testcomponents.ExampleReceiverFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ExporterBuilder: builders.NewExporter(
 			map[component.ID]component.Config{
@@ -1229,6 +1237,7 @@ func testConnectorRouter(t *testing.T) {
 			map[component.Type]exporter.Factory{
 				testcomponents.ExampleExporterFactory.Type(): testcomponents.ExampleExporterFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ConnectorBuilder: builders.NewConnector(
 			map[component.ID]component.Config{
@@ -1260,6 +1269,7 @@ func testConnectorRouter(t *testing.T) {
 			map[component.Type]connector.Factory{
 				testcomponents.ExampleRouterFactory.Type(): testcomponents.ExampleRouterFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		PipelineConfigs: pipelines.Config{
 			tracesInID: {
@@ -2596,6 +2606,7 @@ func testGraphBuildErrors(t *testing.T) {
 						nopReceiverFactory.Type(): nopReceiverFactory,
 						badReceiverFactory.Type(): badReceiverFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ProcessorBuilder: builders.NewProcessor(
 					tt.processorCfgs,
@@ -2603,6 +2614,7 @@ func testGraphBuildErrors(t *testing.T) {
 						nopProcessorFactory.Type(): nopProcessorFactory,
 						badProcessorFactory.Type(): badProcessorFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ExporterBuilder: builders.NewExporter(
 					tt.exporterCfgs,
@@ -2610,6 +2622,7 @@ func testGraphBuildErrors(t *testing.T) {
 						nopExporterFactory.Type(): nopExporterFactory,
 						badExporterFactory.Type(): badExporterFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				ConnectorBuilder: builders.NewConnector(
 					tt.connectorCfgs,
@@ -2618,6 +2631,7 @@ func testGraphBuildErrors(t *testing.T) {
 						badConnectorFactory.Type(): badConnectorFactory,
 						mfConnectorFactory.Type():  mfConnectorFactory,
 					},
+					component.StabilityLevelUndefined,
 				),
 				PipelineConfigs: tt.pipelineCfgs,
 			}
@@ -2697,20 +2711,23 @@ func updateReceiversTestGraph(t *testing.T,
 			map[component.Type]receiver.Factory{
 				testcomponents.ExampleReceiverFactory.Type(): testcomponents.ExampleReceiverFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ProcessorBuilder: builders.NewProcessor(
 			procCfgs,
 			map[component.Type]processor.Factory{
 				testcomponents.ExampleProcessorFactory.Type(): testcomponents.ExampleProcessorFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ExporterBuilder: builders.NewExporter(
 			expCfgs,
 			map[component.Type]exporter.Factory{
 				testcomponents.ExampleExporterFactory.Type(): testcomponents.ExampleExporterFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
-		ConnectorBuilder: builders.NewConnector(connCfgs, connFactories),
+		ConnectorBuilder: builders.NewConnector(connCfgs, connFactories, component.StabilityLevelUndefined),
 		PipelineConfigs:  pipelineConfigs,
 	}
 
@@ -2805,6 +2822,7 @@ func makeUpdatedSettings(base Settings, newRcvrCfgs map[component.ID]component.C
 		map[component.Type]receiver.Factory{
 			testcomponents.ExampleReceiverFactory.Type(): testcomponents.ExampleReceiverFactory,
 		},
+		component.StabilityLevelUndefined,
 	)
 	updated.PipelineConfigs = newPipelineCfgs
 	return updated
@@ -3480,16 +3498,18 @@ func receiverTestGraph(t *testing.T,
 	set := Settings{
 		Telemetry:       componenttest.NewNopTelemetrySettings(),
 		BuildInfo:       component.NewDefaultBuildInfo(),
-		ReceiverBuilder: builders.NewReceiver(rcvrCfgs, rcvrFactories),
+		ReceiverBuilder: builders.NewReceiver(rcvrCfgs, rcvrFactories, component.StabilityLevelUndefined),
 		ProcessorBuilder: builders.NewProcessor(
 			procCfgs,
 			map[component.Type]processor.Factory{testcomponents.ExampleProcessorFactory.Type(): testcomponents.ExampleProcessorFactory},
+			component.StabilityLevelUndefined,
 		),
 		ExporterBuilder: builders.NewExporter(
 			expCfgs,
 			map[component.Type]exporter.Factory{testcomponents.ExampleExporterFactory.Type(): testcomponents.ExampleExporterFactory},
+			component.StabilityLevelUndefined,
 		),
-		ConnectorBuilder: builders.NewConnector(map[component.ID]component.Config{}, map[component.Type]connector.Factory{}),
+		ConnectorBuilder: builders.NewConnector(map[component.ID]component.Config{}, map[component.Type]connector.Factory{}, component.StabilityLevelUndefined),
 		PipelineConfigs:  pipelineConfigs,
 	}
 
@@ -3507,7 +3527,7 @@ func receiverTestGraph(t *testing.T,
 
 func makeErrUpdatedSettings(base Settings, newRcvrCfgs map[component.ID]component.Config, newPipelineCfgs pipelines.Config) Settings {
 	updated := base
-	updated.ReceiverBuilder = builders.NewReceiver(newRcvrCfgs, testErrReceiverFactories)
+	updated.ReceiverBuilder = builders.NewReceiver(newRcvrCfgs, testErrReceiverFactories, component.StabilityLevelUndefined)
 	updated.PipelineConfigs = newPipelineCfgs
 	return updated
 }
@@ -3803,7 +3823,7 @@ func TestUpdateReceiversSharedInstanceRemovedFromOneSignal(t *testing.T) {
 	updatedPipelines := sharedReceiverPipelines(sharedID, nil)
 	updatedPipelines[pipeline.NewID(pipeline.SignalMetrics)].Receivers = nil
 	updatedSet := makeErrUpdatedSettings(set, rcvrCfgs, updatedPipelines)
-	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories)
+	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories, component.StabilityLevelUndefined)
 	require.NoError(t, pg.UpdateReceivers(context.Background(), updatedSet, changedReceiverIDs(rcvrCfgs, rcvrCfgs), rcvrCfgs, factories, host))
 
 	assert.Nil(t, pg.componentGraph.Node(newReceiverNode(pipeline.SignalMetrics, sharedID).ID()), "metrics node should be removed")
@@ -3842,7 +3862,7 @@ func TestUpdateReceiversSharedInstanceAddedToSignal(t *testing.T) {
 
 	// Same receiver config, metrics pipeline adds the receiver.
 	updatedSet := makeErrUpdatedSettings(set, rcvrCfgs, sharedReceiverPipelines(sharedID, nil))
-	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories)
+	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories, component.StabilityLevelUndefined)
 	require.NoError(t, pg.UpdateReceivers(context.Background(), updatedSet, changedReceiverIDs(rcvrCfgs, rcvrCfgs), rcvrCfgs, factories, host))
 
 	require.Len(t, instances, 2, "the traces node is rebuilt together with the added metrics node")
@@ -3891,7 +3911,7 @@ func TestUpdateReceiversSharedInstanceMembershipChange(t *testing.T) {
 	// sees a membership change.
 	updatedPipelines := sharedReceiverPipelines(sharedID, metrics2Cfg(sharedID))
 	updatedSet := makeErrUpdatedSettings(set, rcvrCfgs, updatedPipelines)
-	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories)
+	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories, component.StabilityLevelUndefined)
 	require.NoError(t, pg.UpdateReceivers(context.Background(), updatedSet, changedReceiverIDs(rcvrCfgs, rcvrCfgs), rcvrCfgs, factories, host))
 
 	require.Len(t, instances, 2, "the shared instance is rebuilt once")
@@ -3930,7 +3950,7 @@ func TestUpdateReceiversSharedInstanceConfigChange(t *testing.T) {
 
 	newRcvrCfgs := map[component.ID]component.Config{sharedID: &sharedReceiverConfig{id: "v2"}}
 	updatedSet := makeErrUpdatedSettings(set, newRcvrCfgs, sharedReceiverPipelines(sharedID, nil))
-	updatedSet.ReceiverBuilder = builders.NewReceiver(newRcvrCfgs, factories)
+	updatedSet.ReceiverBuilder = builders.NewReceiver(newRcvrCfgs, factories, component.StabilityLevelUndefined)
 	require.NoError(t, pg.UpdateReceivers(context.Background(), updatedSet, changedReceiverIDs(rcvrCfgs, newRcvrCfgs), newRcvrCfgs, factories, host))
 
 	require.Len(t, instances, 2)
@@ -3961,7 +3981,7 @@ func TestUpdateReceiversSeparateInstancesPerSignal(t *testing.T) {
 	updatedPipelines := sharedReceiverPipelines(recvID, nil)
 	updatedPipelines[pipeline.NewID(pipeline.SignalMetrics)].Receivers = nil
 	updatedSet := makeErrUpdatedSettings(set, rcvrCfgs, updatedPipelines)
-	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories)
+	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories, component.StabilityLevelUndefined)
 	require.NoError(t, pg.UpdateReceivers(context.Background(), updatedSet, changedReceiverIDs(rcvrCfgs, rcvrCfgs), rcvrCfgs, factories, host))
 
 	assert.EqualValues(t, 1, metricsRcvr.stopped.Load())
@@ -3994,7 +4014,7 @@ func TestUpdateReceiversSharedInstanceBehindWrappers(t *testing.T) {
 	updatedPipelines := sharedReceiverPipelines(recvID, nil)
 	updatedPipelines[pipeline.NewID(pipeline.SignalMetrics)].Receivers = nil
 	updatedSet := makeErrUpdatedSettings(set, rcvrCfgs, updatedPipelines)
-	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories)
+	updatedSet.ReceiverBuilder = builders.NewReceiver(rcvrCfgs, factories, component.StabilityLevelUndefined)
 	require.NoError(t, pg.UpdateReceivers(context.Background(), updatedSet, changedReceiverIDs(rcvrCfgs, rcvrCfgs), rcvrCfgs, factories, host))
 
 	require.Len(t, instances, 2, "the traces node is rebuilt together with the removed metrics node")
@@ -4138,16 +4158,18 @@ func TestSharedReceiverStartOrder(t *testing.T) {
 					component.NewIDWithName(sharedType, otherReceiverName): sharedReceiverFactory.CreateDefaultConfig(),
 				},
 				map[component.Type]receiver.Factory{sharedType: sharedReceiverFactory},
+				component.StabilityLevelUndefined,
 			),
-			ProcessorBuilder: builders.NewProcessor(nil, nil),
+			ProcessorBuilder: builders.NewProcessor(nil, nil, component.StabilityLevelUndefined),
 			ExporterBuilder: builders.NewExporter(
 				map[component.ID]component.Config{
 					component.NewID(startableType):              startableExporterFactory.CreateDefaultConfig(),
 					component.NewIDWithName(startableType, "2"): startableExporterFactory.CreateDefaultConfig(),
 				},
 				map[component.Type]exporter.Factory{startableType: startableExporterFactory},
+				component.StabilityLevelUndefined,
 			),
-			ConnectorBuilder: builders.NewConnector(nil, nil),
+			ConnectorBuilder: builders.NewConnector(nil, nil, component.StabilityLevelUndefined),
 			PipelineConfigs: pipelines.Config{
 				pipeline.NewID(pipeline.SignalTraces): {
 					Receivers: []component.ID{component.NewID(sharedType)},

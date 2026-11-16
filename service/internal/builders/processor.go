@@ -19,13 +19,19 @@ import (
 // ProcessorBuilder processor is a helper struct that given a set of Configs
 // and Factories helps with creating processors.
 type ProcessorBuilder struct {
-	cfgs      map[component.ID]component.Config
-	factories map[component.Type]processor.Factory
+	cfgs             map[component.ID]component.Config
+	factories        map[component.Type]processor.Factory
+	minimumStability component.StabilityLevel
 }
 
 // NewProcessor creates a new ProcessorBuilder to help with creating components form a set of configs and factories.
-func NewProcessor(cfgs map[component.ID]component.Config, factories map[component.Type]processor.Factory) *ProcessorBuilder {
-	return &ProcessorBuilder{cfgs: cfgs, factories: factories}
+// The minimumStability is the lowest stability level allowed for the created components.
+func NewProcessor(
+	cfgs map[component.ID]component.Config,
+	factories map[component.Type]processor.Factory,
+	minimumStability component.StabilityLevel,
+) *ProcessorBuilder {
+	return &ProcessorBuilder{cfgs: cfgs, factories: factories, minimumStability: minimumStability}
 }
 
 // CreateTraces creates a Traces processor based on the settings and config.
@@ -41,6 +47,10 @@ func (b *ProcessorBuilder) CreateTraces(ctx context.Context, set processor.Setti
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("processor factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.TracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -63,6 +73,10 @@ func (b *ProcessorBuilder) CreateMetrics(ctx context.Context, set processor.Sett
 		return nil, fmt.Errorf("processor factory not available for: %q", set.ID)
 	}
 
+	if err := checkMinimumStability(f.MetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.MetricsStability())
 	return f.CreateMetrics(ctx, set, cfg, next)
@@ -81,6 +95,10 @@ func (b *ProcessorBuilder) CreateLogs(ctx context.Context, set processor.Setting
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("processor factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.LogsStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -107,6 +125,10 @@ func (b *ProcessorBuilder) CreateProfiles(ctx context.Context, set processor.Set
 	if !ok {
 		return nil, pipeline.ErrSignalNotSupported
 	}
+	if err := checkMinimumStability(f.ProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.ProfilesStability())
 	return f.CreateProfiles(ctx, set, cfg, next)

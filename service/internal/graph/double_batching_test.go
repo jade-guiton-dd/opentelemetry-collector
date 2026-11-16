@@ -98,6 +98,7 @@ func TestExporterNodeReadsBatchingStatusCapability(t *testing.T) {
 				builders.NewExporter(
 					map[component.ID]component.Config{exporterID: factory.CreateDefaultConfig()},
 					map[component.Type]exporter.Factory{exporterType: factory},
+					component.StabilityLevelUndefined,
 				))
 			require.NoError(t, err)
 			require.Equal(t, tt.wantBatching, node.exporterHelperBatchingEnabled)

@@ -64,6 +64,7 @@ func TestComponentInstrumentation(t *testing.T) {
 			map[component.Type]receiver.Factory{
 				testcomponents.ExampleReceiverFactory.Type(): testcomponents.ExampleReceiverFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ProcessorBuilder: builders.NewProcessor(
 			map[component.ID]component.Config{
@@ -72,6 +73,7 @@ func TestComponentInstrumentation(t *testing.T) {
 			map[component.Type]processor.Factory{
 				testcomponents.ExampleProcessorFactory.Type(): testcomponents.ExampleProcessorFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ExporterBuilder: builders.NewExporter(
 			map[component.ID]component.Config{
@@ -81,6 +83,7 @@ func TestComponentInstrumentation(t *testing.T) {
 			map[component.Type]exporter.Factory{
 				testcomponents.ExampleExporterFactory.Type(): testcomponents.ExampleExporterFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ConnectorBuilder: builders.NewConnector(
 			map[component.ID]component.Config{
@@ -106,6 +109,7 @@ func TestComponentInstrumentation(t *testing.T) {
 			map[component.Type]connector.Factory{
 				testcomponents.ExampleRouterFactory.Type(): testcomponents.ExampleRouterFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		PipelineConfigs: pipelines.Config{
 			tracesInID: {

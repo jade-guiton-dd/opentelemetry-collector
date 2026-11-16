@@ -18,6 +18,18 @@ var (
 	NopType            = component.MustNewType("nop")
 )
 
+func checkMinimumStability(sl, minSl component.StabilityLevel) error {
+	if sl <= component.StabilityLevelDeprecated {
+		// Deprecated and Unmaintained components may have been Stable previously,
+		// so allow them to be used as long as they are in the distribution.
+		return nil
+	}
+	if sl < minSl {
+		return fmt.Errorf("component is too unstable for use: stability level is %s versus required %s; consider switching to --channel beta", sl, minSl)
+	}
+	return nil
+}
+
 // logStabilityLevel logs the stability level of a component. The log level is set to info for
 // undefined, unmaintained, deprecated and development. The log level is set to debug
 // for alpha, beta and stable.

@@ -58,6 +58,8 @@ type Settings struct {
 	PipelineConfigs pipelines.Config
 
 	ReportStatus status.ServiceStatusFunc
+
+	MinimumComponentStability component.StabilityLevel
 }
 
 type Graph struct {
@@ -652,7 +654,7 @@ func (g *Graph) UpdateReceivers(ctx context.Context, set Settings,
 	// Running receiver components do not hold a reference to the builder; they
 	// only interact with it during buildComponent to create the component
 	// instance. Unchanged receivers skip the build phase entirely.
-	receiverBuilder := builders.NewReceiver(newReceiverCfgs, receiverFactories)
+	receiverBuilder := builders.NewReceiver(newReceiverCfgs, receiverFactories, set.MinimumComponentStability)
 	set.ReceiverBuilder = receiverBuilder
 	host.Receivers = receiverBuilder
 

@@ -233,6 +233,7 @@ func testGraphFailToStartAndShutdown(t *testing.T) {
 				nopReceiverFactory.Type(): nopReceiverFactory,
 				errReceiverFactory.Type(): errReceiverFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ProcessorBuilder: builders.NewProcessor(
 			map[component.ID]component.Config{
@@ -243,6 +244,7 @@ func testGraphFailToStartAndShutdown(t *testing.T) {
 				nopProcessorFactory.Type(): nopProcessorFactory,
 				errProcessorFactory.Type(): errProcessorFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ExporterBuilder: builders.NewExporter(
 			map[component.ID]component.Config{
@@ -253,6 +255,7 @@ func testGraphFailToStartAndShutdown(t *testing.T) {
 				nopExporterFactory.Type(): nopExporterFactory,
 				errExporterFactory.Type(): errExporterFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 		ConnectorBuilder: builders.NewConnector(
 			map[component.ID]component.Config{
@@ -263,6 +266,7 @@ func testGraphFailToStartAndShutdown(t *testing.T) {
 				nopConnectorFactory.Type(): nopConnectorFactory,
 				errConnectorFactory.Type(): errConnectorFactory,
 			},
+			component.StabilityLevelUndefined,
 		),
 	}
 

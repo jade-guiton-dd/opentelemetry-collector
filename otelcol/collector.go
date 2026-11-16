@@ -247,6 +247,8 @@ func (col *Collector) setupConfigurationComponents(ctx context.Context) error {
 		ExtensionsConfigs:   cfg.Extensions,
 		ExtensionsFactories: factories.Extensions,
 
+		MinimumComponentStability: col.set.DefaultStabilitySettings.Components,
+
 		ModuleInfos: service.ModuleInfos{
 			Receiver:  buildModuleInfo(factories.ReceiverModules),
 			Processor: buildModuleInfo(factories.ProcessorModules),
@@ -382,16 +384,17 @@ func (col *Collector) DryRun(ctx context.Context) error {
 	}
 
 	return service.Validate(ctx, service.Settings{
-		BuildInfo:           col.set.BuildInfo,
-		ReceiversConfigs:    cfg.Receivers,
-		ReceiversFactories:  factories.Receivers,
-		ProcessorsConfigs:   cfg.Processors,
-		ProcessorsFactories: factories.Processors,
-		ExportersConfigs:    cfg.Exporters,
-		ExportersFactories:  factories.Exporters,
-		ConnectorsConfigs:   cfg.Connectors,
-		ConnectorsFactories: factories.Connectors,
-		TelemetryFactory:    factories.Telemetry,
+		BuildInfo:                 col.set.BuildInfo,
+		ReceiversConfigs:          cfg.Receivers,
+		ReceiversFactories:        factories.Receivers,
+		ProcessorsConfigs:         cfg.Processors,
+		ProcessorsFactories:       factories.Processors,
+		ExportersConfigs:          cfg.Exporters,
+		ExportersFactories:        factories.Exporters,
+		ConnectorsConfigs:         cfg.Connectors,
+		ConnectorsFactories:       factories.Connectors,
+		TelemetryFactory:          factories.Telemetry,
+		MinimumComponentStability: col.set.DefaultStabilitySettings.Components,
 	}, service.Config{
 		Pipelines: cfg.Service.Pipelines,
 	})

@@ -16,13 +16,19 @@ import (
 
 // ExporterBuilder is a helper struct that given a set of Configs and Factories helps with creating exporters.
 type ExporterBuilder struct {
-	cfgs      map[component.ID]component.Config
-	factories map[component.Type]exporter.Factory
+	cfgs             map[component.ID]component.Config
+	factories        map[component.Type]exporter.Factory
+	minimumStability component.StabilityLevel
 }
 
 // NewExporter creates a new ExporterBuilder to help with creating components form a set of configs and factories.
-func NewExporter(cfgs map[component.ID]component.Config, factories map[component.Type]exporter.Factory) *ExporterBuilder {
-	return &ExporterBuilder{cfgs: cfgs, factories: factories}
+// The minimumStability is the lowest stability level allowed for the created components.
+func NewExporter(
+	cfgs map[component.ID]component.Config,
+	factories map[component.Type]exporter.Factory,
+	minimumStability component.StabilityLevel,
+) *ExporterBuilder {
+	return &ExporterBuilder{cfgs: cfgs, factories: factories, minimumStability: minimumStability}
 }
 
 // CreateTraces creates a Traces exporter based on the settings and config.
@@ -35,6 +41,10 @@ func (b *ExporterBuilder) CreateTraces(ctx context.Context, set exporter.Setting
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("exporter factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.TracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -54,6 +64,10 @@ func (b *ExporterBuilder) CreateMetrics(ctx context.Context, set exporter.Settin
 		return nil, fmt.Errorf("exporter factory not available for: %q", set.ID)
 	}
 
+	if err := checkMinimumStability(f.MetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.MetricsStability())
 	return f.CreateMetrics(ctx, set, cfg)
@@ -69,6 +83,10 @@ func (b *ExporterBuilder) CreateLogs(ctx context.Context, set exporter.Settings)
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("exporter factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.LogsStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -91,6 +109,10 @@ func (b *ExporterBuilder) CreateProfiles(ctx context.Context, set exporter.Setti
 	f, ok := expFact.(xexporter.Factory)
 	if !ok {
 		return nil, pipeline.ErrSignalNotSupported
+	}
+
+	if err := checkMinimumStability(f.ProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())

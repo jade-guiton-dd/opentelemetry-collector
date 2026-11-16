@@ -75,6 +75,12 @@ type Settings struct {
 	ExtensionsConfigs   map[component.ID]component.Config
 	ExtensionsFactories map[component.Type]extension.Factory
 
+	// MinimumComponentStability is the minimum stability level that a component
+	// factory must report for the signal being built in order for the component
+	// to be created. Components with a lower stability level fail to build.
+	// The zero value (component.StabilityLevelUndefined) disables the check.
+	MinimumComponentStability component.StabilityLevel
+
 	// ModuleInfo describes the go module for each component.
 	ModuleInfos ModuleInfos
 
@@ -102,6 +108,7 @@ type Service struct {
 	meterProvider      telemetry.MeterProvider
 	tracerProvider     telemetry.TracerProvider
 	graphSettings      graph.Settings
+	minimumStability   component.StabilityLevel
 }
 
 // New creates a new Service, its telemetry, and Components.
@@ -109,17 +116,18 @@ func New(ctx context.Context, set Settings, cfg Config) (_ *Service, resultErr e
 	srv := &Service{
 		buildInfo: set.BuildInfo,
 		host: &graph.Host{
-			Receivers:  builders.NewReceiver(set.ReceiversConfigs, set.ReceiversFactories),
-			Processors: builders.NewProcessor(set.ProcessorsConfigs, set.ProcessorsFactories),
-			Exporters:  builders.NewExporter(set.ExportersConfigs, set.ExportersFactories),
-			Connectors: builders.NewConnector(set.ConnectorsConfigs, set.ConnectorsFactories),
-			Extensions: builders.NewExtension(set.ExtensionsConfigs, set.ExtensionsFactories),
+			Receivers:  builders.NewReceiver(set.ReceiversConfigs, set.ReceiversFactories, set.MinimumComponentStability),
+			Processors: builders.NewProcessor(set.ProcessorsConfigs, set.ProcessorsFactories, set.MinimumComponentStability),
+			Exporters:  builders.NewExporter(set.ExportersConfigs, set.ExportersFactories, set.MinimumComponentStability),
+			Connectors: builders.NewConnector(set.ConnectorsConfigs, set.ConnectorsFactories, set.MinimumComponentStability),
+			Extensions: builders.NewExtension(set.ExtensionsConfigs, set.ExtensionsFactories, set.MinimumComponentStability),
 
 			ModuleInfos:       set.ModuleInfos,
 			BuildInfo:         set.BuildInfo,
 			AsyncErrorChannel: set.AsyncErrorChannel,
 		},
-		configSnapshot: set.ConfigSnapshot,
+		configSnapshot:   set.ConfigSnapshot,
+		minimumStability: set.MinimumComponentStability,
 	}
 
 	if set.TelemetryFactory == nil {
@@ -339,14 +347,15 @@ func (srv *Service) initExtensions(ctx context.Context, cfg extensions.Config) e
 // Creates the pipeline graph.
 func (srv *Service) initGraph(ctx context.Context, cfg Config) error {
 	srv.graphSettings = graph.Settings{
-		Telemetry:        srv.telemetrySettings,
-		BuildInfo:        srv.buildInfo,
-		ReceiverBuilder:  srv.host.Receivers,
-		ProcessorBuilder: srv.host.Processors,
-		ExporterBuilder:  srv.host.Exporters,
-		ConnectorBuilder: srv.host.Connectors,
-		PipelineConfigs:  cfg.Pipelines,
-		ReportStatus:     srv.host.Reporter.ReportStatus,
+		Telemetry:                 srv.telemetrySettings,
+		BuildInfo:                 srv.buildInfo,
+		ReceiverBuilder:           srv.host.Receivers,
+		ProcessorBuilder:          srv.host.Processors,
+		ExporterBuilder:           srv.host.Exporters,
+		ConnectorBuilder:          srv.host.Connectors,
+		PipelineConfigs:           cfg.Pipelines,
+		ReportStatus:              srv.host.Reporter.ReportStatus,
+		MinimumComponentStability: srv.minimumStability,
 	}
 	var err error
 	if srv.host.Pipelines, err = graph.Build(ctx, srv.graphSettings); err != nil {
@@ -372,10 +381,10 @@ func Validate(ctx context.Context, set Settings, cfg Config) error {
 	_, err := graph.Build(ctx, graph.Settings{
 		Telemetry:        tel,
 		BuildInfo:        set.BuildInfo,
-		ReceiverBuilder:  builders.NewReceiver(set.ReceiversConfigs, set.ReceiversFactories),
-		ProcessorBuilder: builders.NewProcessor(set.ProcessorsConfigs, set.ProcessorsFactories),
-		ExporterBuilder:  builders.NewExporter(set.ExportersConfigs, set.ExportersFactories),
-		ConnectorBuilder: builders.NewConnector(set.ConnectorsConfigs, set.ConnectorsFactories),
+		ReceiverBuilder:  builders.NewReceiver(set.ReceiversConfigs, set.ReceiversFactories, set.MinimumComponentStability),
+		ProcessorBuilder: builders.NewProcessor(set.ProcessorsConfigs, set.ProcessorsFactories, set.MinimumComponentStability),
+		ExporterBuilder:  builders.NewExporter(set.ExportersConfigs, set.ExportersFactories, set.MinimumComponentStability),
+		ConnectorBuilder: builders.NewConnector(set.ConnectorsConfigs, set.ConnectorsFactories, set.MinimumComponentStability),
 		PipelineConfigs:  cfg.Pipelines,
 	})
 	if err != nil {

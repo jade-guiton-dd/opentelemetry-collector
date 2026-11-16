@@ -121,7 +121,7 @@ func TestConnectorBuilder(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfgs := map[component.ID]component.Config{tt.id: defaultCfg}
-			b := builders.NewConnector(cfgs, factories)
+			b := builders.NewConnector(cfgs, factories, component.StabilityLevelUndefined)
 
 			t2t, err := b.CreateTracesToTraces(context.Background(), createConnectorSettings(tt.id), tt.nextTraces)
 			if expectedErr := tt.err(pipeline.SignalTraces, pipeline.SignalTraces); expectedErr != "" {
@@ -289,7 +289,7 @@ func TestConnectorBuilderMissingConfig(t *testing.T) {
 
 	require.NoError(t, err)
 
-	bErr := builders.NewConnector(map[component.ID]component.Config{}, factories)
+	bErr := builders.NewConnector(map[component.ID]component.Config{}, factories, component.StabilityLevelUndefined)
 	missingID := component.MustNewIDWithName("all", "missing")
 
 	t2t, err := bErr.CreateTracesToTraces(context.Background(), createConnectorSettings(missingID), consumertest.NewNop())
@@ -362,7 +362,7 @@ func TestConnectorBuilderGetters(t *testing.T) {
 	require.NoError(t, err)
 
 	cfgs := map[component.ID]component.Config{component.MustNewID("foo"): struct{}{}}
-	b := builders.NewConnector(cfgs, factories)
+	b := builders.NewConnector(cfgs, factories, component.StabilityLevelUndefined)
 
 	assert.True(t, b.IsConfigured(component.MustNewID("foo")))
 	assert.False(t, b.IsConfigured(component.MustNewID("bar")))
@@ -373,7 +373,7 @@ func TestConnectorBuilderGetters(t *testing.T) {
 
 func TestNewNopConnectorConfigsAndFactories(t *testing.T) {
 	configs, factories := builders.NewNopConnectorConfigsAndFactories()
-	builder := builders.NewConnector(configs, factories)
+	builder := builders.NewConnector(configs, factories, component.StabilityLevelUndefined)
 	require.NotNil(t, builder)
 
 	factory := connectortest.NewNopFactory()

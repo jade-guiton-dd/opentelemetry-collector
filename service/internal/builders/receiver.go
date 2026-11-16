@@ -19,14 +19,20 @@ import (
 // ReceiverBuilder receiver is a helper struct that given a set of Configs and
 // Factories helps with creating receivers.
 type ReceiverBuilder struct {
-	cfgs      map[component.ID]component.Config
-	factories map[component.Type]receiver.Factory
+	cfgs             map[component.ID]component.Config
+	factories        map[component.Type]receiver.Factory
+	minimumStability component.StabilityLevel
 }
 
 // NewReceiver creates a new ReceiverBuilder to help with creating
-// components form a set of configs and factories.
-func NewReceiver(cfgs map[component.ID]component.Config, factories map[component.Type]receiver.Factory) *ReceiverBuilder {
-	return &ReceiverBuilder{cfgs: cfgs, factories: factories}
+// components form a set of configs and factories. The minimumStability is
+// the lowest stability level allowed for the created components.
+func NewReceiver(
+	cfgs map[component.ID]component.Config,
+	factories map[component.Type]receiver.Factory,
+	minimumStability component.StabilityLevel,
+) *ReceiverBuilder {
+	return &ReceiverBuilder{cfgs: cfgs, factories: factories, minimumStability: minimumStability}
 }
 
 // CreateTraces creates a Traces receiver based on the settings and config.
@@ -42,6 +48,10 @@ func (b *ReceiverBuilder) CreateTraces(ctx context.Context, set receiver.Setting
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("receiver factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.TracesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -64,6 +74,10 @@ func (b *ReceiverBuilder) CreateMetrics(ctx context.Context, set receiver.Settin
 		return nil, fmt.Errorf("receiver factory not available for: %q", set.ID)
 	}
 
+	if err := checkMinimumStability(f.MetricsStability(), b.minimumStability); err != nil {
+		return nil, err
+	}
+
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
 	logStabilityLevel(set.Logger, f.MetricsStability())
 	return f.CreateMetrics(ctx, set, cfg, next)
@@ -82,6 +96,10 @@ func (b *ReceiverBuilder) CreateLogs(ctx context.Context, set receiver.Settings,
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("receiver factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.LogsStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
@@ -107,6 +125,10 @@ func (b *ReceiverBuilder) CreateProfiles(ctx context.Context, set receiver.Setti
 	f, ok := recvFact.(xreceiver.Factory)
 	if !ok {
 		return nil, pipeline.ErrSignalNotSupported
+	}
+
+	if err := checkMinimumStability(f.ProfilesStability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())

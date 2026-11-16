@@ -21,14 +21,20 @@ type Extension interface {
 
 // ExtensionBuilder is a helper struct that given a set of Configs and Factories helps with creating extensions.
 type ExtensionBuilder struct {
-	cfgs      map[component.ID]component.Config
-	factories map[component.Type]extension.Factory
+	cfgs             map[component.ID]component.Config
+	factories        map[component.Type]extension.Factory
+	minimumStability component.StabilityLevel
 }
 
 // NewExtension creates a new ExtensionBuilder to help with creating
-// components form a set of configs and factories.
-func NewExtension(cfgs map[component.ID]component.Config, factories map[component.Type]extension.Factory) *ExtensionBuilder {
-	return &ExtensionBuilder{cfgs: cfgs, factories: factories}
+// components form a set of configs and factories. The minimumStability is
+// the lowest stability level allowed for the created components.
+func NewExtension(
+	cfgs map[component.ID]component.Config,
+	factories map[component.Type]extension.Factory,
+	minimumStability component.StabilityLevel,
+) *ExtensionBuilder {
+	return &ExtensionBuilder{cfgs: cfgs, factories: factories, minimumStability: minimumStability}
 }
 
 // Create creates an extension based on the settings and configs available.
@@ -41,6 +47,10 @@ func (b *ExtensionBuilder) Create(ctx context.Context, set extension.Settings) (
 	f, existsFactory := b.factories[set.ID.Type()]
 	if !existsFactory {
 		return nil, fmt.Errorf("extension factory not available for: %q", set.ID)
+	}
+
+	if err := checkMinimumStability(f.Stability(), b.minimumStability); err != nil {
+		return nil, err
 	}
 
 	logDeprecatedTypeAlias(set.Logger, f, set.ID.Type())
