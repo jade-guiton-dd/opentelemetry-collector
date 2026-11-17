@@ -14,6 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"go.opentelemetry.io/collector/component"
+
 	"go.opentelemetry.io/collector/featuregate"
 )
 
@@ -71,10 +73,30 @@ func updateSettingsUsingFlags(set *CollectorSettings, flags *flag.FlagSet) error
 		return errors.New("at least one Provider must be supplied")
 	}
 
+	if channel := getChannelFlag(flags); channel != "" {
+		switch channel {
+		case "development":
+			set.DefaultStabilitySettings.Components = component.StabilityLevelDevelopment
+		case "alpha":
+			set.DefaultStabilitySettings.Components = component.StabilityLevelAlpha
+		case "beta":
+			set.DefaultStabilitySettings.Components = component.StabilityLevelBeta
+		case "stable":
+			set.DefaultStabilitySettings.Components = component.StabilityLevelStable
+		default:
+			return fmt.Errorf("unknown release channel %q", channel)
+		}
+		if channel == "stable" {
+			set.DefaultStabilitySettings.FeatureGates = featuregate.StageStable
+		} else {
+			set.DefaultStabilitySettings.FeatureGates = featuregate.StageBeta
+		}
+	}
+
 	stableFG := set.DefaultStabilitySettings.FeatureGates == featuregate.StageStable
 	featuregate.GlobalRegistry().SetStableOnly(stableFG)
 	if stableFG && flags.Lookup("feature-gates").Value.(interface{ WasSet() bool }).WasSet() {
-		return errors.New("cannot customize feature gates in stable release channel; consider -channel=beta")
+		return errors.New("cannot customize feature gates in stable release channel; consider switching to --channel beta")
 	}
 
 	return nil

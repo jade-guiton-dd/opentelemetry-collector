@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	configFlag = "config"
+	configFlag  = "config"
+	channelFlag = "channel"
 )
 
 type configFlagValue struct {
@@ -49,6 +50,9 @@ func flags(reg *featuregate.Registry) *flag.FlagSet {
 			return nil
 		})
 
+	flagSet.String(channelFlag, "",
+		"The release channel of the Collector to use. Determines which components and features are available. Must be one of 'development', 'alpha', 'beta', or 'stable'.")
+
 	reg.RegisterFlags(flagSet)
 	return flagSet
 }
@@ -56,4 +60,8 @@ func flags(reg *featuregate.Registry) *flag.FlagSet {
 func getConfigFlag(flagSet *flag.FlagSet) []string {
 	cfv := flagSet.Lookup(configFlag).Value.(*configFlagValue)
 	return append(cfv.values, cfv.sets...)
+}
+
+func getChannelFlag(flagSet *flag.FlagSet) string {
+	return flagSet.Lookup(channelFlag).Value.String()
 }
