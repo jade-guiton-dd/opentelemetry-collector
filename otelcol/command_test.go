@@ -250,3 +250,102 @@ func TestNewFeatureGateCommand(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestFeatureGateStability(t *testing.T) {
+	reg := featuregate.GlobalRegistry()
+	alphaGate := reg.MustRegister("test.channel.alpha", featuregate.StageAlpha)
+	betaGate := reg.MustRegister("test.channel.beta", featuregate.StageBeta)
+	stableGate := reg.MustRegister("test.channel.stable", featuregate.StageStable,
+		featuregate.WithRegisterToVersion("v1.0.0"))
+	t.Cleanup(func() {
+		reg.SetStableOnly(false)
+	})
+
+	newSet := func(stability featuregate.Stage) CollectorSettings {
+		return CollectorSettings{
+			DefaultStabilitySettings: DefaultStabilitySettings{FeatureGates: stability},
+			ConfigProviderSettings: ConfigProviderSettings{
+				ResolverSettings: confmap.ResolverSettings{
+					ProviderFactories: []confmap.ProviderFactory{confmap.NewProviderFactory(newFailureProvider)},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name                string
+		settingsStability   featuregate.Stage
+		channel             string
+		featureGates        string
+		expectedStability   featuregate.Stage
+		expectedBetaEnabled bool
+		expectedErr         string
+	}{
+		{
+			name:                "stable channel keeps only stable gates enabled",
+			channel:             "stable",
+			expectedStability:   featuregate.StageStable,
+			expectedBetaEnabled: false,
+		},
+		{
+			name:                "beta channel enables beta and stable gates",
+			channel:             "beta",
+			expectedStability:   featuregate.StageBeta,
+			expectedBetaEnabled: true,
+		},
+		{
+			name:         "stable channel rejects customized feature gates",
+			channel:      "stable",
+			featureGates: "+test.channel.beta",
+			expectedErr:  "cannot customize feature gates in stable release channel; consider switching to --channel beta",
+		},
+		{
+			name:                "feature gate stability in settings keeps only stable gates enabled",
+			settingsStability:   featuregate.StageStable,
+			expectedStability:   featuregate.StageStable,
+			expectedBetaEnabled: false,
+		},
+		{
+			name:                "channel flag takes precedence over feature gate stability in settings",
+			settingsStability:   featuregate.StageStable,
+			channel:             "beta",
+			expectedStability:   featuregate.StageBeta,
+			expectedBetaEnabled: true,
+		},
+		{
+			name:              "feature gate stability in settings rejects customized feature gates",
+			settingsStability: featuregate.StageStable,
+			featureGates:      "+test.channel.beta",
+			expectedErr:       "cannot customize feature gates in stable release channel; consider switching to --channel beta",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg.SetStableOnly(false)
+
+			set := newSet(tt.settingsStability)
+			args := []string{"--config=a.yaml"}
+			if tt.channel != "" {
+				args = append(args, "--channel="+tt.channel)
+			}
+			if tt.featureGates != "" {
+				args = append(args, "--feature-gates="+tt.featureGates)
+			}
+			flgs := flags(reg)
+			require.NoError(t, flgs.Parse(args))
+
+			err := updateSettingsUsingFlags(&set, flgs)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			require.Equal(t, tt.expectedStability, set.DefaultStabilitySettings.FeatureGates)
+			assert.False(t, alphaGate.IsEnabled())
+			assert.Equal(t, tt.expectedBetaEnabled, betaGate.IsEnabled())
+			assert.True(t, stableGate.IsEnabled())
+		})
+	}
+}
