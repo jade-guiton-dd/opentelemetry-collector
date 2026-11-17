@@ -28,7 +28,8 @@ func (r *Registry) RegisterFlags(flagSet *flag.FlagSet, _ ...RegisterFlagsOption
 
 // flagValue implements the flag.Value interface and directly applies feature gate statuses to a Registry.
 type flagValue struct {
-	reg *Registry
+	reg    *Registry
+	wasSet bool
 }
 
 func (f *flagValue) String() string {
@@ -71,6 +72,11 @@ func (f *flagValue) Set(s string) error {
 			id = id[1:]
 		}
 		errs = multierr.Append(errs, f.reg.Set(id, val))
+		f.wasSet = true
 	}
 	return errs
+}
+
+func (f *flagValue) WasSet() bool {
+	return f.wasSet
 }

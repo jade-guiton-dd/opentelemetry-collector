@@ -50,6 +50,8 @@ func NewCommand(set CollectorSettings) *cobra.Command {
 }
 
 // Puts command line flags from flags into the CollectorSettings, to be used during config resolution.
+//
+// Also updates the global feature flag registry based on the inferred release channel.
 func updateSettingsUsingFlags(set *CollectorSettings, flags *flag.FlagSet) error {
 	resolverSet := &set.ConfigProviderSettings.ResolverSettings
 	configFlags := getConfigFlag(flags)
@@ -67,6 +69,12 @@ func updateSettingsUsingFlags(set *CollectorSettings, flags *flag.FlagSet) error
 
 	if len(resolverSet.ProviderFactories) == 0 {
 		return errors.New("at least one Provider must be supplied")
+	}
+
+	stableFG := set.DefaultStabilitySettings.FeatureGates == featuregate.StageStable
+	featuregate.GlobalRegistry().SetStableOnly(stableFG)
+	if stableFG && flags.Lookup("feature-gates").Value.(interface{ WasSet() bool }).WasSet() {
+		return errors.New("cannot customize feature gates in stable release channel; consider -channel=beta")
 	}
 
 	return nil

@@ -34,7 +34,8 @@ func GlobalRegistry() *Registry {
 }
 
 type Registry struct {
-	gates sync.Map
+	gates      sync.Map
+	stableOnly atomic.Bool
 }
 
 // NewRegistry returns a new empty Registry.
@@ -135,8 +136,9 @@ func (r *Registry) Register(id string, stage Stage, opts ...RegisterOption) (*Ga
 	}
 
 	g := &Gate{
-		id:    id,
-		stage: stage,
+		id:         id,
+		stage:      stage,
+		stableOnly: &r.stableOnly,
 	}
 	for _, opt := range opts {
 		err := opt.apply(g)
@@ -210,4 +212,9 @@ func (r *Registry) VisitAll(fn func(*Gate)) {
 	for i := range gates {
 		fn(gates[i])
 	}
+}
+
+// SetStableOnly sets "stable only" mode, in which Alpha and Beta feature gates are disabled.
+func (r *Registry) SetStableOnly(stableOnly bool) {
+	r.stableOnly.Store(stableOnly)
 }

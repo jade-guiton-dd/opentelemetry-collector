@@ -20,6 +20,7 @@ type Gate struct {
 	toVersion    *version.Version
 	stage        Stage
 	enabled      *atomic.Bool
+	stableOnly   *atomic.Bool
 }
 
 // ID returns the id of the Gate.
@@ -29,6 +30,9 @@ func (g *Gate) ID() string {
 
 // IsEnabled returns true if the feature described by the Gate is enabled.
 func (g *Gate) IsEnabled() bool {
+	if g.stableOnly.Load() {
+		return g.stage == StageStable
+	}
 	return g.enabled.Load()
 }
 
